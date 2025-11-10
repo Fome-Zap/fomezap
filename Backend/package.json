@@ -1,0 +1,33 @@
+{
+  "name": "fomezap-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "description": "FomeZap - API multi-tenant para cardápio digital",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon ./index.js localhost 5000",
+    "dev": "nodemon ./index.js localhost 5000"
+  },
+  "keywords": [
+    "fomezap",
+    "cardapio",
+    "digital",
+    "multi-tenant",
+    "restaurante"
+  ],
+  "author": "FomeZap Team",
+  "license": "MIT",
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "multer": "^2.0.2",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

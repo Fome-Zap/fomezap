@@ -1,0 +1,1173 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import './FomeZapExact.css';
+import { API_URL, API_BASE_URL, getImageUrl } from '../config/api';
+
+function FomeZapExact() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tenantId = searchParams.get('tenant') || 'demo';
+  const categoryFilterRef = useRef(null);
+  
+  const [tenantData, setTenantData] = useState(null);
+  const [categorias, setCategorias] = useState([]);
+  const [produtos, setProdutos] = useState([]);
+  const [extras, setExtras] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(null);
+  const [horarioInfo, setHorarioInfo] = useState(null);
+  const [categoriaAtiva, setCategoriaAtiva] = useState('all');
+  const [carrinho, setCarrinho] = useState(() => {
+    // Recuperar carrinho do localStorage ao inicializar
+    const carrinhoSalvo = localStorage.getItem(`carrinho_${tenantId}`);
+    return carrinhoSalvo ? JSON.parse(carrinhoSalvo) : [];
+  });
+  const [cartOpen, setCartOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [extrasModalOpen, setExtrasModalOpen] = useState(false);
+  const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
+  const [closedModalOpen, setClosedModalOpen] = useState(false);
+  const [currentItem, setCurrentItem] = useState(null);
+  const [selectedExtras, setSelectedExtras] = useState({});
+  
+  // Estados para controlar visibilidade das setas
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+  
+  // Estado para toast de notificações
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Função para formatar preço em BRL
+  const formatarPreco = (valor) => {
+    return valor.toFixed(2).replace('.', ',');
+  };
+
+  // Função para mostrar toast
+  const mostrarToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
+
+  // Salvar carrinho no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem(`carrinho_${tenantId}`, JSON.stringify(carrinho));
+  }, [carrinho, tenantId]);
+
+  useEffect(() => {
+    carregarDados();
+    
+    // Debug: mostrar comando para limpar carrinho bugado
+    console.log('🧹 Para limpar carrinho bugado, execute no console:');
+    console.log(`localStorage.removeItem('carrinho_${tenantId}')`);
+  }, [tenantId]);
+
+  // Verificar scroll das categorias e atualizar setas
+  useEffect(() => {
+    const checkScroll = () => {
+      const container = categoryFilterRef.current;
+      if (!container) return;
+
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      
+      // Mostrar seta esquerda se houver scroll para esquerda
+      setShowLeftArrow(scrollLeft > 0);
+      
+      // Mostrar seta direita se houver conteúdo para rolar à direita
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 5);
+    };
+
+    const container = categoryFilterRef.current;
+    if (container) {
+      // Verificar inicialmente
+      checkScroll();
+      
+      // Adicionar listener de scroll
+      container.addEventListener('scroll', checkScroll);
+      
+      // Verificar quando redimensionar
+      window.addEventListener('resize', checkScroll);
+      
+      return () => {
+        container.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+  }, [categorias]); // Re-executar quando categorias mudarem
+
+  // Funções para scroll suave nas setas
+  const scrollLeft = () => {
+    if (categoryFilterRef.current) {
+      categoryFilterRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (categoryFilterRef.current) {
+      categoryFilterRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
+
+  const carregarDados = async () => {
+    try {
+      setLoading(true);
+      setErro(null);
+
+      console.log('🔄 Carregando dados do tenant:', tenantId);
+
+      // Buscar dados do cardápio (rotas públicas - sem autenticação)
+      const [categoriasRes, produtosRes, extrasRes, horarioRes, configRes] = await Promise.all([
+        fetch(`${API_URL}/${tenantId}/cardapio/categorias`),
+        fetch(`${API_URL}/${tenantId}/cardapio/produtos`),
+        fetch(`${API_URL}/${tenantId}/cardapio/extras`),
+        fetch(`${API_URL}/${tenantId}/cardapio/horario`),
+        fetch(`${API_URL}/${tenantId}/cardapio/configuracoes`)
+      ]);
+
+      console.log('📡 Respostas recebidas:', {
+        categorias: categoriasRes.ok,
+        produtos: produtosRes.ok,
+        extras: extrasRes.ok,
+        horario: horarioRes.ok,
+        config: configRes.ok
+      });
+
+      if (!categoriasRes.ok || !produtosRes.ok || !extrasRes.ok) {
+        throw new Error('Erro ao buscar dados');
+      }
+
+      const [categoriasData, produtosData, extrasData, horarioData, configData] = await Promise.all([
+        categoriasRes.json(),
+        produtosRes.json(),
+        extrasRes.json(),
+        horarioRes.ok ? horarioRes.json() : null,
+        configRes.ok ? configRes.json() : null
+      ]);
+
+      console.log('✅ Dados parseados:', {
+        categorias: categoriasData.length,
+        produtos: produtosData.length,
+        extras: extrasData.length,
+        horario: horarioData,
+        config: configData
+      });
+
+      // Configurar dados do tenant
+      setTenantData({
+        nome: configData?.nome || 'FomeZap',
+        telefone: configData?.telefone || '(11) 99999-9999',
+        endereco: configData?.endereco || 'Rua Exemplo, 123',
+        taxaEntrega: configData?.taxaEntrega || 5.00,
+        aceitaDelivery: configData?.aceitaDelivery !== false
+      });
+      
+      // Informações de horário
+      setHorarioInfo(horarioData);
+      
+      setCategorias(categoriasData.filter(c => c.ativa)); // Apenas categorias ativas
+      setProdutos(produtosData.filter(p => p.disponivel)); // Apenas produtos disponíveis
+      setExtras(extrasData.filter(e => e.disponivel)); // Apenas extras disponíveis
+      
+      console.log('🎉 Carregamento concluído com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao carregar cardápio:', error);
+      setErro('Não foi possível carregar o cardápio. Verifique se o backend está rodando.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const produtosFiltrados = categoriaAtiva === 'all' 
+    ? produtos
+    : produtos.filter(produto => produto.categoria._id === categoriaAtiva);
+
+  // Verificar se o produto tem extras vinculados
+  const produtoTemExtras = (produto) => {
+    if (!produto.extras || produto.extras.length === 0) return false;
+    
+    // Verificar se algum extra vinculado está disponível
+    const extrasDisponiveis = produto.extras.filter(extraId => 
+      extras.some(extra => extra._id === extraId && extra.disponivel)
+    );
+    
+    return extrasDisponiveis.length > 0;
+  };
+
+  // Buscar extras disponíveis para um produto
+  const getExtrasDisponiveis = (produto) => {
+    if (!produto.extras) return [];
+    
+    return extras.filter(extra => 
+      produto.extras.includes(extra._id) && extra.disponivel
+    );
+  };
+
+  // Calcular quantidade total de itens no carrinho
+  const quantidadeTotalCarrinho = carrinho.reduce((total, item) => {
+    return total + item.quantidade;
+  }, 0);
+
+  const totalCarrinho = carrinho.reduce((total, item) => {
+    const extrasTotal = item.extras ? item.extras.reduce((sum, extra) => sum + extra.preco, 0) : 0;
+    return total + ((item.preco + extrasTotal) * item.quantidade);
+  }, 0);
+
+  const handleAddToCart = (produto) => {
+    console.log('🛒 handleAddToCart chamado:', produto);
+    
+    // Verificar se o restaurante está fechado
+    if (horarioInfo && !horarioInfo.aberto) {
+      console.log('🚫 Restaurante fechado, abrindo modal');
+      setClosedModalOpen(true);
+      return;
+    }
+    
+    console.log('📦 Extras do produto:', produto.extras);
+    console.log('✅ Extras disponíveis:', getExtrasDisponiveis(produto));
+    
+    if (produtoTemExtras(produto)) {
+      console.log('✨ Produto tem extras, abrindo modal');
+      setCurrentItem(produto);
+      setSelectedExtras({});
+      setExtrasModalOpen(true);
+    } else {
+      console.log('⚡ Produto sem extras, adicionando direto ao carrinho');
+      adicionarAoCarrinho(produto, []);
+    }
+  };
+
+  const adicionarAoCarrinho = (produto, extrasEscolhidos = []) => {
+    console.log('📦 Adicionando ao carrinho:', { 
+      produto,
+      _id: produto._id,
+      nome: produto.nome,
+      extras: extrasEscolhidos 
+    });
+    
+    const itemExistente = carrinho.find(item => 
+      item._id === produto._id && 
+      JSON.stringify(item.extras) === JSON.stringify(extrasEscolhidos)
+    );
+
+    if (itemExistente) {
+      setCarrinho(carrinho.map(item =>
+        item === itemExistente 
+          ? { ...item, quantidade: item.quantidade + 1 }
+          : item
+      ));
+    } else {
+      const novoItem = { 
+        ...produto,
+        quantidade: 1,
+        extras: extrasEscolhidos,
+        observacao: '' // Campo de observação vazio inicialmente
+      };
+      console.log('✅ Novo item no carrinho:', novoItem);
+      setCarrinho([...carrinho, novoItem]);
+    }
+    
+    // Abrir o carrinho automaticamente
+    setCartOpen(true);
+  };
+
+  const confirmarExtras = () => {
+    if (currentItem) {
+      const extrasEscolhidos = Object.keys(selectedExtras)
+        .filter(key => selectedExtras[key])
+        .map(extraId => extras.find(extra => extra._id === extraId))
+        .filter(Boolean);
+      
+      adicionarAoCarrinho(currentItem, extrasEscolhidos);
+      setExtrasModalOpen(false);
+      setCurrentItem(null);
+      setSelectedExtras({});
+      setCartOpen(true);
+    }
+  };
+
+  const cancelarExtras = () => {
+    if (currentItem) {
+      adicionarAoCarrinho(currentItem, []);
+      setExtrasModalOpen(false);
+      setCurrentItem(null);
+      setSelectedExtras({});
+      setCartOpen(true);
+    }
+  };
+
+  const removerDoCarrinho = (index) => {
+    console.log('🗑️ Removendo item do carrinho, index:', index);
+    setCarrinho(carrinho.filter((item, i) => i !== index));
+  };
+
+  const atualizarObservacao = (index, observacao) => {
+    setCarrinho(carrinho.map((item, i) => 
+      i === index ? { ...item, observacao } : item
+    ));
+  };
+
+  const alterarQuantidade = (index, delta) => {
+    console.log('🔢 Alterando quantidade, index:', index, 'delta:', delta);
+    setCarrinho(carrinho.map((item, i) => {
+      if (i === index) {
+        const novaQuantidade = item.quantidade + delta;
+        return novaQuantidade > 0 ? { ...item, quantidade: novaQuantidade } : null;
+      }
+      return item;
+    }).filter(Boolean));
+  };
+
+  const finalizarPedido = () => {
+    if (carrinho.length === 0) {
+      alert('Adicione itens ao carrinho antes de finalizar o pedido.');
+      return;
+    }
+    
+    // Navegar para página de checkout passando o carrinho
+    navigate(`/checkout?tenant=${tenantId}`, {
+      state: { carrinho }
+    });
+  };
+
+  const enviarWhatsApp = async (dadosEntrega) => {
+    try {
+      // 1. SALVAR PEDIDO NO BANCO
+      const tenantSlug = new URLSearchParams(window.location.search).get('tenant') || 'demo';
+      
+      console.log('🔍 Iniciando envio do pedido...');
+      console.log('📦 Tenant:', tenantSlug);
+      console.log('🛒 Carrinho:', carrinho);
+      
+      // Preparar dados do pedido
+      const pedidoData = {
+        cliente: {
+          nome: dadosEntrega.nome,
+          telefone: '(00) 00000-0000' // Você pode adicionar campo de telefone no modal depois
+        },
+        itens: carrinho.map(item => {
+          const extrasPreco = item.extras ? item.extras.reduce((total, extra) => total + (extra.preco || 0), 0) : 0;
+          return {
+            produtoId: item._id,
+            nome: item.nome,
+            preco: item.preco,
+            quantidade: item.quantidade,
+            extras: item.extras ? item.extras.map(extra => ({
+              nome: extra.nome,
+              preco: extra.preco || 0
+            })) : [],
+            observacoes: item.observacao || '',
+            subtotal: (item.preco + extrasPreco) * item.quantidade
+          };
+        }),
+        entrega: {
+          tipo: dadosEntrega.tipoEntrega === 'Entrega' ? 'delivery' : 'retirada',
+          endereco: dadosEntrega.tipoEntrega === 'Entrega' ? 
+            `${dadosEntrega.endereco}${dadosEntrega.complemento ? ' - ' + dadosEntrega.complemento : ''}` : '',
+          taxa: dadosEntrega.tipoEntrega === 'Entrega' ? 5.00 : 0
+        },
+        subtotal: totalCarrinho,
+        taxaEntrega: dadosEntrega.tipoEntrega === 'Entrega' ? 5.00 : 0,
+        valorTotal: totalCarrinho + (dadosEntrega.tipoEntrega === 'Entrega' ? 5.00 : 0),
+        pagamento: {
+          forma: dadosEntrega.pagamento.toLowerCase(),
+          status: 'pendente'
+        },
+        observacoes: dadosEntrega.observacaoGeral || ''
+      };
+
+      console.log('📤 Enviando pedido:', JSON.stringify(pedidoData, null, 2));
+
+      // Enviar para API
+      const response = await fetch(`${API_URL}/${tenantSlug}/pedidos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pedidoData)
+      });
+
+      console.log('📡 Resposta HTTP:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido no servidor' }));
+        console.error('❌ Erro do servidor:', errorData);
+        throw new Error(errorData.message || `Erro HTTP ${response.status}`);
+      }
+
+      const resultado = await response.json();
+      console.log('✅ Pedido salvo com sucesso:', resultado);
+
+      // 2. ENVIAR WHATSAPP (mantendo a mesma lógica)
+      let mensagem = `*🍔 NOVO PEDIDO - ${tenantData.nome}*\n`;
+      mensagem += `📋 *Pedido #${resultado.pedido.numeroPedido}*\n\n`;
+      mensagem += `*📋 ITENS DO PEDIDO:*\n\n`;
+      
+      carrinho.forEach((item, index) => {
+        const extrasTotal = item.extras ? item.extras.reduce((sum, extra) => sum + (extra.preco || 0), 0) : 0;
+        const precoTotal = (item.preco + extrasTotal) * item.quantidade;
+        
+        mensagem += `${index + 1}. *${item.nome}*\n`;
+        mensagem += `   Qtd: ${item.quantidade}x - R$ ${formatarPreco(item.preco)}\n`;
+        
+        if (item.extras && item.extras.length > 0) {
+          mensagem += `   Extras: ${item.extras.map(extra => extra.nome).join(', ')}\n`;
+        }
+        
+        if (item.observacao && item.observacao.trim() !== '') {
+          mensagem += `   📝 Obs: ${item.observacao}\n`;
+        }
+        
+        mensagem += `   Subtotal: R$ ${formatarPreco(precoTotal)}\n\n`;
+      });
+
+      mensagem += `*💰 TOTAL: R$ ${formatarPreco(resultado.pedido.valorTotal)}*\n\n`;
+      
+      mensagem += `*👤 DADOS DO CLIENTE:*\n`;
+      mensagem += `Nome: ${dadosEntrega.nome}\n`;
+      
+      if (dadosEntrega.tipoEntrega === 'Entrega') {
+        mensagem += `📍 Entregar em: ${dadosEntrega.endereco}\n`;
+        if (dadosEntrega.complemento) {
+          mensagem += `Complemento: ${dadosEntrega.complemento}\n`;
+        }
+      } else {
+        mensagem += `🏪 Retirar na loja\n`;
+      }
+      
+      mensagem += `💳 Pagamento: ${dadosEntrega.pagamento}\n`;
+      
+      if (dadosEntrega.troco) {
+        mensagem += `💰 Troco para: R$ ${dadosEntrega.troco}\n`;
+      }
+      
+      if (dadosEntrega.observacaoGeral && dadosEntrega.observacaoGeral.trim() !== '') {
+        mensagem += `\n*📝 OBSERVAÇÕES DO PEDIDO:*\n${dadosEntrega.observacaoGeral}\n`;
+      }
+
+      const telefone = tenantData.telefone.replace(/\D/g, '');
+      const urlWhatsApp = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
+      window.open(urlWhatsApp, '_blank');
+      
+      // Limpar carrinho após enviar
+      setCarrinho([]);
+      setDeliveryModalOpen(false);
+      
+      // Mostrar toast de sucesso (melhor que alert)
+      mostrarToast(`✅ Pedido #${resultado.pedido.numeroPedido} registrado!`, 'success');
+
+    } catch (error) {
+      console.error('❌ ERRO COMPLETO:', error);
+      
+      // Mostrar toast de erro
+      mostrarToast(`❌ Erro: ${error.message}`, 'error');
+      
+      // Não fechar o modal para permitir corrigir dados
+      // setDeliveryModalOpen(false); // REMOVIDO
+      
+      // Permitir enviar WhatsApp mesmo se falhar salvar (fallback)
+      const telefone = tenantData.telefone.replace(/\D/g, '');
+      let mensagem = `*🍔 NOVO PEDIDO - ${tenantData.nome}*\n\n*ITENS:*\n\n`;
+      carrinho.forEach((item, index) => {
+        mensagem += `${index + 1}. ${item.nome} (${item.quantidade}x)\n`;
+      });
+      const urlWhatsApp = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
+      window.open(urlWhatsApp, '_blank');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Carregando cardápio...</p>
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div className="error-container">
+        <p>{erro}</p>
+        <button onClick={carregarDados} className="btn-retry">Tentar novamente</button>
+      </div>
+    );
+  }
+
+  if (!tenantData || categorias.length === 0) {
+    return (
+      <div className="error-container">
+        <h2>Cardápio Vazio</h2>
+        <p>Este restaurante ainda não possui categorias e produtos cadastrados.</p>
+        <p>Entre no painel administrativo para começar a adicionar itens ao cardápio.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fome-zap-exact">
+      {/* Header */}
+      <header>
+        <div className="header-container">
+          <div className="logo">
+            {tenantData.logo ? (
+              <img src={tenantData.logo} alt={tenantData.nome} />
+            ) : (
+              <h1>{tenantData.nome}</h1>
+            )}
+          </div>
+          
+          {horarioInfo && (
+            <div className={`status-badge ${horarioInfo.aberto ? 'open' : 'closed'}`} id="statusBadge">
+              <span className="status-dot"></span>
+              <span className="status-text">{horarioInfo.aberto ? 'ABERTO' : 'FECHADO'}</span>
+            </div>
+          )}
+          
+          <nav>
+            <div 
+              className="cart-icon" 
+              onClick={() => setCartOpen(!cartOpen)}
+            >
+              <i className="fas fa-shopping-bag" style={{fontSize: '29px'}}></i>
+              <span className="cart-count">{quantidadeTotalCarrinho}</span>
+            </div>
+            <div 
+              className="menu-icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {/* Menu icon content if needed */}
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      {/* Mobile Menu */}
+      <div className={`mobile-menu ${mobileMenuOpen ? 'active' : ''}`}>
+        <div className="mobile-menu-header">
+          <div className="mobile-logo">
+            <img src="images/familialogo.jpg" alt="Logo" />
+          </div>
+          <div 
+            className="close-menu"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <i className="fas fa-times"></i>
+          </div>
+        </div>
+        <nav className="mobile-nav">
+          {categorias.map(categoria => (
+            <a 
+              key={categoria._id}
+              href={`#${categoria._id}`}
+              onClick={() => {
+                setCategoriaAtiva(categoria._id);
+                setMobileMenuOpen(false);
+              }}
+            >
+              {categoria.icone} {categoria.nome}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      {cartOpen && <div className="overlay" onClick={() => setCartOpen(false)}></div>}
+
+      {/* Setas de navegação das categorias - Fixas na tela */}
+      <div 
+        className={`scroll-indicator-left ${showLeftArrow ? 'visible' : ''}`}
+        onClick={scrollLeft}
+      >
+        <i className="fas fa-chevron-left"></i>
+      </div>
+      <div 
+        className={`scroll-indicator-right ${showRightArrow ? 'visible' : ''}`}
+        onClick={scrollRight}
+      >
+        <i className="fas fa-chevron-right"></i>
+      </div>
+
+      {/* Main Content */}
+      <main style={{marginTop: '110px'}}>
+        {/* Filtros fixos no topo - Igual ao HTML original */}
+        <div className="sticky-filter" style={{
+          position: 'fixed', 
+          top: '65px', 
+          left: '0px', 
+          width: '100%', 
+          zIndex: 100, 
+          transition: 'top 0.1s, opacity 0.1s', 
+          opacity: 1, 
+          pointerEvents: 'auto',
+          marginTop: '0',
+          paddingTop: '10px'
+        }}>
+          <div className="category-filter" ref={categoryFilterRef}>
+            <button
+              className={`filter-btn ${categoriaAtiva === 'all' ? 'active' : ''}`}
+              onClick={() => setCategoriaAtiva('all')}
+            >
+              Todos
+            </button>
+            {categorias.map(categoria => (
+              <button
+                key={categoria._id}
+                className={`filter-btn ${categoriaAtiva === categoria._id ? 'active' : ''}`}
+                data-category={categoria._id}
+                onClick={() => setCategoriaAtiva(categoria._id)}
+              >
+                {categoria.icone} {categoria.nome}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Seções de produtos */}
+        <section id={categoriaAtiva}>
+          <div className="section-title">
+            <h2>
+              {categoriaAtiva === 'all' 
+                ? 'Cardápio Completo'
+                : categorias.find(c => c._id === categoriaAtiva)?.nome || 'Produtos'
+              }
+            </h2>
+          </div>
+          <div className="menu-grid">
+            {produtosFiltrados.map(produto => (
+              <div key={produto._id} className="menu-item">
+                <div className="item-image">
+                  {/* Prioridade: imagem → emoji → placeholder */}
+                  {produto.imagem ? (
+                    <img 
+                      src={getImageUrl(produto.imagem)}
+                      alt={produto.nome}
+                      onError={(e) => {
+                        e.target.src = '/placeholder-food.jpg';
+                      }}
+                    />
+                  ) : produto.emoji ? (
+                    <div style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontSize: '5rem',
+                      backgroundColor: '#f3f4f6'
+                    }}>
+                      {produto.emoji}
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontSize: '4rem',
+                      backgroundColor: '#f3f4f6',
+                      color: '#d1d5db'
+                    }}>
+                      🍽️
+                    </div>
+                  )}
+                </div>
+                <div className="item-info">
+                  <div className="item-header">
+                    <h3 className="item-title">
+                      {produto.codigo && `${produto.codigo} - `}{produto.nome}
+                    </h3>
+                    <p className="item-description">{produto.descricao}</p>
+                  </div>
+                  <div className="item-footer">
+                    <span className="item-price">R$ {formatarPreco(produto.preco)}</span>
+                    <button 
+                      className="add-to-cart"
+                      onClick={() => handleAddToCart(produto)}
+                    >
+                      <i className="fas fa-plus"></i> Adicionar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      {/* Cart Sidebar - Igual ao HTML original */}
+      <div className={`cart-sidebar ${cartOpen ? 'active' : ''}`}>
+        <div className="cart-header">
+          <h3>Seu Pedido</h3>
+          <div 
+            className="close-cart"
+            onClick={() => setCartOpen(false)}
+          >
+            <i className="fas fa-times"></i>
+          </div>
+        </div>
+        
+        <div className="cart-items">
+          {carrinho.length === 0 ? (
+            <div className="empty-cart">
+              <i className="fas fa-shopping-cart" style={{ fontSize: '3rem', color: '#ddd', marginBottom: '1rem' }}></i>
+              <p style={{ fontSize: '1.1rem', color: '#999' }}>Seu carrinho está vazio</p>
+              <p style={{ fontSize: '0.9rem', color: '#bbb' }}>Adicione itens deliciosos!</p>
+            </div>
+          ) : (
+            carrinho.map((item, index) => {
+              const extrasTotal = item.extras ? item.extras.reduce((sum, extra) => sum + (extra.preco || 0), 0) : 0;
+              const precoTotal = (item.preco + extrasTotal) * item.quantidade;
+              
+              // Processar imagem/emoji
+              const imagemUrl = getImageUrl(item.imagem);
+              const emoji = item.emoji || null;
+              
+              return (
+                <div key={index} className="cart-item">
+                  {/* Imagem/Emoji + Info */}
+                  <div className="cart-item-main">
+                    {/* Thumbnail */}
+                    <div className="cart-item-thumbnail">
+                      {imagemUrl ? (
+                        <img src={imagemUrl} alt={item.nome} />
+                      ) : emoji ? (
+                        <div className="cart-item-emoji">{emoji}</div>
+                      ) : (
+                        <div className="cart-item-placeholder">🍽️</div>
+                      )}
+                    </div>
+                    
+                    {/* Info e Preço na mesma linha */}
+                    <div className="cart-item-info">
+                      <div className="cart-item-header">
+                        <h4>{item.nome}</h4>
+                        <span className="cart-item-price">R$ {formatarPreco(precoTotal)}</span>
+                      </div>
+                      
+                      {/* Extras como etiquetas */}
+                      {item.extras && item.extras.length > 0 && (
+                        <div className="extras-tags">
+                          {item.extras.map((extra, idx) => (
+                            <span key={idx} className="extra-tag">
+                              + {extra.nome}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Observações */}
+                  <input 
+                    type="text" 
+                    placeholder="Observações: sem cebola, ponto da carne..."
+                    value={item.observacao || ''}
+                    onChange={(e) => atualizarObservacao(index, e.target.value)}
+                    className="obs-input-full"
+                  />
+                  
+                  {/* Controles de Quantidade e Remover */}
+                  <div className="cart-item-controls">
+                    <div className="quantity-controls">
+                      <button onClick={() => alterarQuantidade(index, -1)}>
+                        <i className="fas fa-minus"></i>
+                      </button>
+                      <span className="cart-item-quantity">{item.quantidade}</span>
+                      <button onClick={() => alterarQuantidade(index, 1)}>
+                        <i className="fas fa-plus"></i>
+                      </button>
+                    </div>
+                    
+                    <button 
+                      className="remove-item"
+                      onClick={() => removerDoCarrinho(index)}
+                      title="Remover item"
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        
+        <div className="cart-footer">
+          <div className="cart-total">
+            <span>Total:</span>
+            <span>R$ {formatarPreco(totalCarrinho)}</span>
+          </div>
+
+          <button className="add-more-items" onClick={() => setCartOpen(false)}>
+            <i className="fas fa-cart-plus"></i> Adicionar mais itens
+          </button>
+
+          <button className="checkout-btn" onClick={finalizarPedido}>
+            <i className="fas fa-check"></i> Finalizar Pedido
+          </button>
+        </div>
+      </div>
+
+      {/* Modal de Extras */}
+      {extrasModalOpen && currentItem && (
+        <div className="extras-modal active">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Adicionar acréscimo ou Continuar</h3>
+              <div className="close-modal" onClick={() => setExtrasModalOpen(false)}>
+                <i className="fas fa-times"></i>
+              </div>
+            </div>
+            <div className="extras-body">
+              <div className="item-preview">
+                <h4>{currentItem.nome}</h4>
+                <p>Preço Normal: R$ {formatarPreco(currentItem.preco)}</p>
+              </div>
+
+              <div className="extras-options">
+                <h4>Adicionar acréscimo:</h4>
+                <div className="extras-list">
+                  {getExtrasDisponiveis(currentItem).map(extra => (
+                    <div key={extra._id} className="extra-item">
+                      <div className="extra-check">
+                        <input 
+                          type="checkbox" 
+                          id={extra._id} 
+                          checked={selectedExtras[extra._id] || false}
+                          onChange={(e) => setSelectedExtras({
+                            ...selectedExtras,
+                            [extra._id]: e.target.checked
+                          })}
+                        />
+                        <label htmlFor={extra._id} className="extra-name">{extra.nome}</label>
+                      </div>
+                      <span className="extra-price">+ R$ {formatarPreco(extra.preco)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="extras-footer">
+              <button className="cancel-extras" onClick={cancelarExtras}>
+                Sem Acréscimo
+              </button>
+              <button className="confirm-extras" onClick={confirmarExtras}>
+                Add Acréscimo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Informações de Entrega */}
+      {deliveryModalOpen && (
+        <DeliveryModal 
+          onClose={() => setDeliveryModalOpen(false)}
+          onConfirm={enviarWhatsApp}
+          totalPedido={totalCarrinho}
+          mostrarToast={mostrarToast}
+        />
+      )}
+
+      {/* Modal de Restaurante Fechado */}
+      {closedModalOpen && horarioInfo && (
+        <ClosedModal 
+          onClose={() => setClosedModalOpen(false)}
+          horarioInfo={horarioInfo}
+        />
+      )}
+
+      {/* Toast de Notificações */}
+      {toast.show && (
+        <div className={`toast-notification toast-${toast.type}`}>
+          {toast.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Componente DeliveryModal
+function DeliveryModal({ onClose, onConfirm, totalPedido, mostrarToast }) {
+  const [formData, setFormData] = useState({
+    nome: '',
+    tipoEntrega: 'Entrega',
+    endereco: '',
+    complemento: '',
+    pagamento: 'Dinheiro',
+    troco: '',
+    observacaoGeral: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!formData.nome) {
+      mostrarToast('⚠️ Por favor, preencha seu nome', 'error');
+      return;
+    }
+    
+    if (formData.tipoEntrega === 'Entrega' && !formData.endereco) {
+      mostrarToast('⚠️ Por favor, preencha o endereço de entrega', 'error');
+      return;
+    }
+    
+    onConfirm(formData);
+  };
+
+  return (
+    <div className="delivery-modal active">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>Informações para Entrega</h3>
+          <div className="close-modal" onClick={onClose}>
+            <i className="fas fa-times"></i>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="customerName">Nome Completo</label>
+            <input 
+              type="text" 
+              id="customerName" 
+              value={formData.nome}
+              onChange={(e) => setFormData({...formData, nome: e.target.value})}
+              required 
+            />
+          </div>
+
+          <div className="delivery-options">
+            <div className="delivery-option">
+              <input 
+                type="radio" 
+                id="deliveryOption" 
+                name="deliveryType" 
+                value="Entrega" 
+                checked={formData.tipoEntrega === 'Entrega'}
+                onChange={(e) => setFormData({...formData, tipoEntrega: e.target.value})}
+              />
+              <label htmlFor="deliveryOption">Entrega</label>
+            </div>
+            <div className="delivery-option">
+              <input 
+                type="radio" 
+                id="pickupOption" 
+                name="deliveryType" 
+                value="Retirada"
+                checked={formData.tipoEntrega === 'Retirada'}
+                onChange={(e) => setFormData({...formData, tipoEntrega: e.target.value})}
+              />
+              <label htmlFor="pickupOption">Retirar</label>
+            </div>
+          </div>
+
+          {formData.tipoEntrega === 'Entrega' ? (
+            <div className="delivery-address-fields">
+              <div className="form-group">
+                <label htmlFor="deliveryAddress">Endereço, Nº</label>
+                <input 
+                  type="text" 
+                  id="deliveryAddress" 
+                  value={formData.endereco}
+                  onChange={(e) => {
+                    setFormData({...formData, endereco: e.target.value});
+                    setErro(''); // Limpa erro ao digitar
+                  }}
+                  placeholder="Rua exemplo, 1029 - Bairro X"
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="deliveryComplement">Bairro/Complemento</label>
+                <input 
+                  type="text" 
+                  id="deliveryComplement" 
+                  value={formData.complemento}
+                  onChange={(e) => setFormData({...formData, complemento: e.target.value})}
+                  placeholder="Bairro, Apto, Bloco, etc." 
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="store-address">
+              <p><strong>Endereço para retirada:</strong></p>
+              <p>Rua Atilio Lotto, 127 - Jardim Olímpia</p>
+              <p>Jaú/SP - CEP: 17208710</p>
+              <p>Horário: Qua-Dom 18h-22h30</p>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label>Forma de Pagamento</label>
+            <div className="payment-options">
+              <div className="payment-option">
+                <input 
+                  type="radio" 
+                  id="paymentCash" 
+                  name="payment" 
+                  value="Dinheiro"
+                  checked={formData.pagamento === 'Dinheiro'}
+                  onChange={(e) => setFormData({...formData, pagamento: e.target.value})}
+                />
+                <label htmlFor="paymentCash">Dinheiro</label>
+              </div>
+              <div className="payment-option">
+                <input 
+                  type="radio" 
+                  id="paymentCard" 
+                  name="payment" 
+                  value="Cartão"
+                  checked={formData.pagamento === 'Cartão'}
+                  onChange={(e) => setFormData({...formData, pagamento: e.target.value})}
+                />
+                <label htmlFor="paymentCard">Cartão</label>
+              </div>
+              <div className="payment-option">
+                <input 
+                  type="radio" 
+                  id="paymentPix" 
+                  name="payment" 
+                  value="PIX"
+                  checked={formData.pagamento === 'PIX'}
+                  onChange={(e) => setFormData({...formData, pagamento: e.target.value})}
+                />
+                <label htmlFor="paymentPix">PIX</label>
+              </div>
+            </div>
+          </div>
+
+          {formData.pagamento === 'Dinheiro' && (
+            <div className="form-group">
+              <label htmlFor="changeFor">Troco para</label>
+              <input 
+                type="number" 
+                id="changeFor" 
+                value={formData.troco}
+                onChange={(e) => setFormData({...formData, troco: e.target.value})}
+                placeholder="Valor para o troco" 
+              />
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="observacaoGeral">Observações do Pedido (opcional)</label>
+            <textarea 
+              id="observacaoGeral" 
+              value={formData.observacaoGeral}
+              onChange={(e) => setFormData({...formData, observacaoGeral: e.target.value})}
+              placeholder="Ex: Deixar na portaria, tocar campainha 2x, sem talher descartável..."
+              rows="3"
+            />
+          </div>
+
+          <div className="order-summary">
+            <div className="total-order">
+              <strong>Total do Pedido: R$ {totalPedido.toFixed(2)}</strong>
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" className="cancel-order" onClick={onClose}>
+              Cancelar
+            </button>
+            <button type="submit" className="confirm-order">
+              <i className="fab fa-whatsapp"></i> Enviar Pedido
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Componente ClosedModal
+function ClosedModal({ onClose, horarioInfo }) {
+  const diasSemanaMap = {
+    'domingo': 'Dom',
+    'segunda': 'Seg',
+    'terca': 'Ter',
+    'quarta': 'Qua',
+    'quinta': 'Qui',
+    'sexta': 'Sex',
+    'sabado': 'Sáb'
+  };
+  
+  const formatarDiasSemana = () => {
+    if (!horarioInfo.diasFuncionamento || horarioInfo.diasFuncionamento.length === 0) {
+      return 'Não informado';
+    }
+    
+    const dias = horarioInfo.diasFuncionamento.map(dia => diasSemanaMap[dia]);
+    
+    if (dias.length === 7) {
+      return 'Todos os dias';
+    } else if (dias.length === 5 && !horarioInfo.diasFuncionamento.includes('domingo') && !horarioInfo.diasFuncionamento.includes('sabado')) {
+      return 'Segunda a Sexta';
+    } else if (dias.length === 6 && !horarioInfo.diasFuncionamento.includes('domingo')) {
+      return 'Segunda a Sábado';
+    } else {
+      return dias.join(', ');
+    }
+  };
+
+  return (
+    <div className="extras-modal active">
+      <div className="modal-content" style={{ maxWidth: '400px' }}>
+        <div className="modal-header">
+          <h3>🕐 Restaurante Fechado</h3>
+          <div className="close-modal" onClick={onClose}>
+            <i className="fas fa-times"></i>
+          </div>
+        </div>
+        
+        <div className="modal-body" style={{ padding: '1.5rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem', color: '#666' }}>
+            Desculpe, estamos fechados no momento.
+          </p>
+          
+          <div style={{ 
+            backgroundColor: '#f8f9fa', 
+            padding: '1.5rem', 
+            borderRadius: '8px',
+            marginBottom: '1rem'
+          }}>
+            <h4 style={{ marginBottom: '1rem', color: '#333' }}>Horário de Funcionamento</h4>
+            
+            <div style={{ marginBottom: '0.8rem' }}>
+              <strong>Dias:</strong> {formatarDiasSemana()}
+            </div>
+            
+            <div style={{ marginBottom: '0.8rem' }}>
+              <strong>Horário:</strong> {horarioInfo.horarioAbertura} - {horarioInfo.horarioFechamento}
+            </div>
+            
+            {horarioInfo.horaAtual && (
+              <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '1rem' }}>
+                Agora são {horarioInfo.horaAtual}
+              </div>
+            )}
+          </div>
+          
+          <p style={{ fontSize: '0.95rem', color: '#888' }}>
+            Volte mais tarde ou agende seu pedido para quando estivermos abertos! 😊
+          </p>
+        </div>
+
+        <div className="modal-actions">
+          <button 
+            type="button" 
+            className="confirm-button" 
+            onClick={onClose}
+            style={{ width: '100%' }}
+          >
+            Entendi
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default FomeZapExact;

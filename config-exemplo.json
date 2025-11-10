@@ -1,0 +1,109 @@
+{
+  "restaurante": {
+    "nome": "Família Burguer",
+    "logo": "images/familialogo.jpg",
+    "telefone": "5511999999999",
+    "endereco": "Rua das Flores, 123",
+    "horarioFuncionamento": {
+      "abertura": "18:00",
+      "fechamento": "23:30",
+      "diasSemana": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"]
+    },
+    "cores": {
+      "primaria": "#ff6b35",
+      "secundaria": "#2c3e50",
+      "botao": "#27ae60"
+    }
+  },
+  "categorias": [
+    {
+      "id": "burgersfrench",
+      "nome": "Lanches Pão Francês",
+      "icone": "fas fa-bread-slice",
+      "imagemPadrao": "images/paofrances.png",
+      "ordem": 1
+    },
+    {
+      "id": "burgers",
+      "nome": "Lanches Pão de Hambúrguer", 
+      "icone": "fas fa-hamburger",
+      "imagemPadrao": "images/paohamburg.png",
+      "ordem": 2
+    },
+    {
+      "id": "onplate",
+      "nome": "Lanches no Prato",
+      "icone": "fas fa-utensils",
+      "imagemPadrao": "images/lancheprato.jpg",
+      "ordem": 3
+    },
+    {
+      "id": "bebidas",
+      "nome": "Bebidas",
+      "icone": "fas fa-glass-whiskey",
+      "imagemPadrao": "images/bebidas.png",
+      "ordem": 4
+    }
+  ],
+  "produtos": [
+    {
+      "id": 1,
+      "codigo": "01",
+      "nome": "À MODA DA CASA",
+      "descricao": "Lombo, contra filé, filé de frango, alface, tomate, 2 ovos, presunto, queijo, requeijão e cebola.",
+      "preco": 64.00,
+      "categoria": "burgersfrench",
+      "imagem": null,
+      "disponivel": true,
+      "destaque": true,
+      "extras": ["bacon", "ovo", "queijo_extra"],
+      "tags": ["completo", "premium"]
+    },
+    {
+      "id": 2,
+      "codigo": "02", 
+      "nome": "AMERICANO",
+      "descricao": "Contra filé, alface, tomate, ovo, presunto, queijo, requeijão e cebola.",
+      "preco": 55.00,
+      "categoria": "burgersfrench",
+      "imagem": null,
+      "disponivel": true,
+      "destaque": false,
+      "extras": ["bacon", "ovo"],
+      "tags": ["popular"]
+    }
+  ],
+  "extras": [
+    {
+      "id": "bacon",
+      "nome": "Bacon Extra",
+      "preco": 5.00
+    },
+    {
+      "id": "ovo",
+      "nome": "Ovo Extra", 
+      "preco": 3.00
+    },
+    {
+      "id": "queijo_extra",
+      "nome": "Queijo Extra",
+      "preco": 4.00
+    }
+  ],
+  "configuracoes": {
+    "mostarPrecos": true,
+    "permitirExtras": true,
+    "taxaEntrega": 5.00,
+    "pedidoMinimo": 25.00,
+    "tempoEstimado": "45-60 minutos",
+    "formasPagamento": ["dinheiro", "pix", "cartao"],
+    "mensagemWhatsApp": "Olá! Gostaria de fazer um pedido:",
+    "observacoesEspeciais": [
+      "Sem cebola",
+      "Sem tomate", 
+      "Sem maionese",
+      "Ponto da carne: mal passada",
+      "Ponto da carne: bem passada"
+    ]
+  }
+}

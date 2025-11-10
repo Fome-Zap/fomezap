@@ -1,0 +1,636 @@
+.pedidos-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pedidos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.pedidos-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.btn-atualizar {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-atualizar:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Filtros de Status */
+.filtros-status {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filtros-status button {
+  padding: 0.7rem 1.5rem;
+  border: 2px solid #e0e0e0;
+  background-color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  color: #666;
+}
+
+.filtros-status button:hover {
+  border-color: #ff6900;
+  color: #ff6900;
+  transform: translateY(-2px);
+}
+
+.filtros-status button.filtro-ativo {
+  background-color: #ff6900;
+  color: white;
+  border-color: #ff6900;
+}
+
+/* Grid de Pedidos */
+.pedidos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.pedido-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+  border: 2px solid #f0f0f0;
+}
+
+.pedido-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+.pedido-header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.pedido-header-card h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.pedido-data {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0.3rem 0 0 0;
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-recebido {
+  background-color: #ffeaa7;
+  color: #d63031;
+}
+
+.status-preparando {
+  background-color: #74b9ff;
+  color: #0984e3;
+}
+
+.status-pronto {
+  background-color: #55efc4;
+  color: #00b894;
+}
+
+.status-saiu {
+  background-color: #a29bfe;
+  color: #6c5ce7;
+}
+
+.status-entregue {
+  background-color: #00b894;
+  color: white;
+}
+
+.status-cancelado {
+  background-color: #ff7675;
+  color: white;
+}
+
+/* Seções do Card */
+.pedido-cliente,
+.pedido-itens,
+.pedido-observacoes,
+.pedido-pagamento {
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.pedido-cliente p,
+.pedido-pagamento p {
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Itens */
+.item-resumo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.item-resumo:last-child {
+  border-bottom: none;
+}
+
+.item-extras {
+  font-size: 0.8rem;
+  color: #888;
+  font-style: italic;
+  margin-left: 1rem;
+}
+
+.item-obs {
+  font-size: 0.8rem;
+  color: #ff6900;
+  font-weight: 600;
+  margin-left: 1rem;
+}
+
+.pedido-observacoes {
+  background-color: #fff3e0;
+  border-left: 4px solid #ff9800;
+}
+
+.pedido-observacoes p {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  color: #555;
+  font-style: italic;
+}
+
+.pedido-total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ff6900;
+  margin-top: 0.5rem !important;
+}
+
+/* Ações */
+.pedido-acoes {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.pedido-acoes button {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.7rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+}
+
+.btn-avancar {
+  background-color: #00b894;
+  color: white;
+}
+
+.btn-avancar:hover {
+  background-color: #00a383;
+  transform: scale(1.05);
+}
+
+.btn-imprimir {
+  background-color: #6c5ce7;
+  color: white;
+}
+
+.btn-imprimir:hover {
+  background-color: #5f4dd1;
+  transform: scale(1.05);
+}
+
+.btn-cancelar {
+  background-color: #d63031;
+  color: white;
+}
+
+.btn-cancelar:hover {
+  background-color: #c0282a;
+  transform: scale(1.05);
+}
+
+/* Loading e Empty States */
+.loading,
+.sem-pedidos {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+  font-size: 1.2rem;
+}
+
+/* Impressão */
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-only,
+  .print-only * {
+    visibility: visible;
+  }
+  
+  .print-only {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: block;
+  }
+  
+  .comanda-impressao {
+    padding: 20px;
+    font-family: 'Courier New', monospace;
+    max-width: 80mm; /* Tamanho de impressora térmica */
+  }
+  
+  .comanda-impressao h2,
+  .comanda-impressao h3,
+  .comanda-impressao h4 {
+    margin: 10px 0;
+  }
+  
+  .comanda-impressao p {
+    margin: 5px 0;
+  }
+  
+  .comanda-impressao hr {
+    border: none;
+    border-top: 2px dashed #000;
+    margin: 15px 0;
+  }
+}
+
+/* ===================================
+   NOVOS ESTILOS - BADGES CLICÁVEIS
+   =================================== */
+
+/* Seção de Alterar Status */
+.alterar-status-section {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #dee2e6;
+}
+
+/* Container dos Badges */
+.status-badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Botões de Badge de Status */
+.status-badge-btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.status-badge-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.status-badge-btn:active {
+  transform: translateY(0);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal de Confirmação */
+.modal-confirmacao {
+  background: white;
+  border-radius: 16px;
+  padding: 0;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header do Modal */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Body do Modal */
+.modal-body {
+  padding: 24px;
+}
+
+.modal-pedido-info {
+  text-align: center;
+  font-size: 16px;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.modal-pedido-info strong {
+  color: #111827;
+  font-size: 18px;
+}
+
+/* Preview da Mudança de Status */
+.status-change-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-radius: 12px;
+}
+
+.status-atual,
+.status-novo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.status-change-preview .label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-change-preview .status-badge {
+  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.arrow {
+  font-size: 32px;
+  color: #9ca3af;
+  font-weight: bold;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Footer do Modal */
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  background-color: #f9fafb;
+}
+
+.btn-cancelar-modal,
+.btn-confirmar-modal {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancelar-modal {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.btn-cancelar-modal:hover {
+  background-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.btn-confirmar-modal {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-confirmar-modal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-confirmar-modal:active {
+  transform: translateY(0);
+}
+
+/* Status específicos no badge */
+.status-recebido {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.status-preparando {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.status-pronto {
+  background-color: #10b981;
+  color: white;
+}
+
+.status-saiu_entrega {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.status-entregue {
+  background-color: #059669;
+  color: white;
+}
+
+.status-cancelado {
+  background-color: #ef4444;
+  color: white;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .pedidos-container {
+    padding: 1rem;
+  }
+  
+  .pedidos-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filtros-status {
+    flex-direction: column;
+  }
+  
+  .filtros-status button {
+    width: 100%;
+  }
+  
+  .pedido-acoes {
+    flex-direction: column;
+  }
+  
+  .pedido-acoes button {
+    width: 100%;
+  }
+
+  .status-badges-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .status-badge-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-confirmacao {
+    width: 95%;
+    margin: 20px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .btn-cancelar-modal,
+  .btn-confirmar-modal {
+    width: 100%;
+  }
+}

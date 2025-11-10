@@ -1,0 +1,18 @@
+/* Placeholder para logo e produtos */
+.product-image img[src="/logo.png"],
+.product-image img[src*="placeholder"] {
+    background: linear-gradient(135deg, #ff6b35, #ff8c5a);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+}
+
+.product-image img[src="/logo.png"]::before {
+    content: "🍔";
+}
+
+.product-image img[src*="placeholder"]::before {
+    content: "🍽️";
+}
