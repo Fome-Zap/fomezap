@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image as ImageIcon, Smile } from 'lucide-react';
+import { Image as ImageIcon, Smile, X } from 'lucide-react';
 import ModalSelecionarEmoji from './ModalSelecionarEmoji';
 import UploadFoto from './UploadFoto';
 import { getImageUrl } from '../config/api';
@@ -44,20 +44,22 @@ const SeletorImagemProduto = ({ valor, onChange }) => {
             </button>
           </div>
           
-          <div className="flex items-center justify-center w-full h-48 bg-white rounded-lg border-2 border-gray-200">
-            {isEmoji ? (
-              <span className="text-8xl">{valor}</span>
-            ) : (
-              <img
-                src={getImageUrl(valor)}
-                alt="Preview do produto"
-                className="max-w-full max-h-full object-contain rounded-lg"
-                onError={(e) => {
-                  console.error('Erro ao carregar imagem:', valor);
-                  e.target.style.display = 'none';
-                }}
-              />
-            )}
+          <div className="flex items-center justify-center">
+            <div className="w-32 h-32 bg-white rounded-lg border-2 border-gray-200 flex items-center justify-center overflow-hidden">
+              {isEmoji ? (
+                <span className="text-5xl">{valor}</span>
+              ) : (
+                <img
+                  src={getImageUrl(valor)}
+                  alt="Preview do produto"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Erro ao carregar imagem:', valor);
+                    e.target.style.display = 'none';
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       ) : (

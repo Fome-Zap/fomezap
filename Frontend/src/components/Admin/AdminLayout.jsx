@@ -5,12 +5,17 @@ import { useAuth } from '../../contexts/AuthContext';
 
 function AdminLayout() {
   const [menuAberto, setMenuAberto] = useState(false);
+  const [modalSair, setModalSair] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const confirmarSair = () => {
+    setModalSair(true);
   };
 
   return (
@@ -146,7 +151,7 @@ function AdminLayout() {
             Configurações
           </NavLink>
 
-          <div className="border-t border-gray-200 my-4"></div>
+          <div className="border-t border-gray-200 mt-auto"></div>
 
           <a
             href="/?tenant=demo"
@@ -162,7 +167,7 @@ function AdminLayout() {
           </a>
 
           <button
-            onClick={handleLogout}
+            onClick={confirmarSair}
             className="flex items-center px-6 py-3 text-red-600 hover:bg-red-50 transition-colors w-full text-left"
           >
             <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,6 +177,41 @@ function AdminLayout() {
           </button>
         </nav>
       </aside>
+
+      {/* Modal de confirmação para sair */}
+      {modalSair && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 rounded-full p-3">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Confirmar Saída</h2>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Tem certeza que deseja sair do painel administrativo?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalSair(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+              >
+                Sim, Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto md:ml-0">

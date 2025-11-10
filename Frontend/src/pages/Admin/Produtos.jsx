@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useCurrencyInput } from '../../hooks/useCurrencyInput.js';
 import api from '../../api/api';
 import SeletorImagemProduto from '../../components/SeletorImagemProduto';
+import { getImageUrl } from '../../config/api';
 
 const TENANT_ID = 'demo';
 
@@ -305,79 +306,72 @@ function Produtos() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {produtosFiltrados.map((produto) => (
-            <div key={produto._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden">
-              {/* Mostrar imagem ou emoji */}
-              {produto.imagem || produto.emoji ? (
-                <div className="h-48 bg-gray-200 flex items-center justify-center">
+            <div key={produto._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-3">
+              <div className="flex gap-3 mb-2">
+                {/* Thumbnail da imagem/emoji */}
+                <div className="w-16 h-16 flex-shrink-0 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
                   {produto.imagem ? (
                     <img
-                      src={produto.imagem.startsWith('http') ? produto.imagem : `http://localhost:5000${produto.imagem}`}
+                      src={getImageUrl(produto.imagem)}
                       alt={produto.nome}
                       className="w-full h-full object-cover"
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   ) : (
-                    <span className="text-6xl">{produto.emoji}</span>
+                    <span className="text-3xl">{produto.emoji || '🍽️'}</span>
                   )}
                 </div>
-              ) : null}
-              
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg">{produto.nome}</h3>
-                    <p className="text-sm text-gray-500">{produto.categoria.nome}</p>
-                  </div>
-                  <div className="flex flex-col gap-1 items-end">
-                    <span className="text-lg font-bold text-green-600">
+                
+                {/* Informações do produto */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-base line-clamp-1">{produto.nome}</h3>
+                  <p className="text-xs text-gray-500 mb-1">{produto.categoria.nome}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold text-green-600">
                       R$ {produto.preco.toFixed(2)}
                     </span>
                     {produto.destaque && (
-                      <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                        Destaque
-                      </span>
+                      <span className="text-sm">⭐</span>
                     )}
                   </div>
                 </div>
-                
-                {produto.descricao && (
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{produto.descricao}</p>
+              </div>
+              
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className={`text-xs px-2 py-1 rounded font-medium ${
+                  produto.disponivel
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {produto.disponivel ? 'Ativo' : 'Inativo'}
+                </span>
+                {produto.destaque && (
+                  <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-medium">
+                    Destaque
+                  </span>
                 )}
-                
-                <div className="flex items-center gap-2 mb-3">
-                  <button
-                    onClick={() => toggleDisponibilidade(produto)}
-                    className={`px-3 py-1 rounded text-sm ${
-                      produto.disponivel
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {produto.disponivel ? '✓ Disponível' : '✕ Indisponível'}
-                  </button>
-                  {produto.extras?.length > 0 && (
-                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                      {produto.extras.length} extra(s)
-                    </span>
-                  )}
-                </div>
+                {produto.extras?.length > 0 && (
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-medium">
+                    {produto.extras.length} extra(s)
+                  </span>
+                )}
+              </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => abrirModal(produto)}
-                    className="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded hover:bg-blue-100"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDeletar(produto)}
-                    className="flex-1 bg-red-50 text-red-600 px-4 py-2 rounded hover:bg-red-100"
-                  >
-                    Deletar
-                  </button>
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => abrirModal(produto)}
+                  className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-100 text-sm font-medium"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDeletar(produto)}
+                  className="bg-red-50 text-red-600 px-3 py-1.5 rounded hover:bg-red-100 text-sm font-medium"
+                >
+                  Deletar
+                </button>
               </div>
             </div>
           ))}
