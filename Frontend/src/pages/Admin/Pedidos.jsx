@@ -1,23 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { RefreshCw, Bell, BellRing } from 'lucide-react';
 import './Pedidos.css';
 import api from '../../api/api';
 
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [atualizando, setAtualizando] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
   const [modalConfirmacao, setModalConfirmacao] = useState({ aberto: false, pedido: null, novoStatus: null });
+  const [novosPedidos, setNovosPedidos] = useState(0);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState(null);
+  const audioRef = useRef(null);
+  const pedidosAnterioresRef = useRef([]);
   const tenantSlug = 'demo'; // TODO: Pegar dinamicamente do contexto
 
   // Carregar pedidos
   useEffect(() => {
-    carregarPedidos();
-    // Atualizar a cada 30 segundos
-    const interval = setInterval(carregarPedidos, 30000);
+    carregarPedidos(true); // Primeira carga
+    // Polling automático a cada 15 segundos
+    const interval = setInterval(() => carregarPedidos(false), 15000);
     return () => clearInterval(interval);
-  }, [filtroStatus]);
+  }, []); // Remove filtroStatus para não recarregar ao trocar filtro
 
   useEffect(() => {
     if (mensagem.texto) {
@@ -28,24 +34,95 @@ export default function Pedidos() {
     }
   }, [mensagem]);
 
+  // Tocar som de notificação
+  const tocarNotificacao = () => {
+    // Criar som de notificação simples
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+  };
+
   const mostrarMensagem = (texto, tipo = 'sucesso') => {
     setMensagem({ tipo, texto });
   };
 
-  const carregarPedidos = async () => {
+  const carregarPedidos = async (isManual = false) => {
     try {
-      const url = filtroStatus === 'todos' 
-        ? `/api/admin/${tenantSlug}/pedidos`
-        : `/api/admin/${tenantSlug}/pedidos?status=${filtroStatus}`;
+      if (isManual) setAtualizando(true);
+      
+      // SEMPRE buscar todos os pedidos para ter contadores corretos
+      const url = `/api/admin/${tenantSlug}/pedidos`;
       
       const response = await api.get(url);
-      setPedidos(response.data.pedidos || []);
+      const pedidosCarregados = response.data.pedidos || [];
+      
+      // Detectar novos pedidos
+      if (pedidosAnterioresRef.current.length > 0 && !isManual) {
+        const idsAntigos = pedidosAnterioresRef.current.map(p => p._id);
+        const pedidosRealmenteNovos = pedidosCarregados.filter(p => !idsAntigos.includes(p._id));
+        
+        if (pedidosRealmenteNovos.length > 0) {
+          setNovosPedidos(prev => prev + pedidosRealmenteNovos.length);
+          tocarNotificacao();
+          mostrarMensagem(
+            `🔔 ${pedidosRealmenteNovos.length} novo(s) pedido(s) chegou!`,
+            'novo'
+          );
+          
+          // Notificação do navegador (se permitido)
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Novo Pedido! 🍔', {
+              body: `${pedidosRealmenteNovos.length} pedido(s) acabou de chegar!`,
+              icon: '/logo.png',
+              badge: '/logo.png'
+            });
+          }
+        }
+      }
+      
+      // Atualizar referência dos pedidos anteriores
+      pedidosAnterioresRef.current = pedidosCarregados;
+      
+      // Feedback para atualização manual
+      if (isManual) {
+        if (pedidosCarregados.length === 0) {
+          mostrarMensagem('✨ Nenhum pedido no momento. Tudo tranquilo!', 'info');
+        } else {
+          mostrarMensagem(`✅ Lista atualizada! ${pedidosCarregados.length} pedido(s) no total.`, 'info');
+        }
+      }
+      
+      setPedidos(pedidosCarregados);
+      setUltimaAtualizacao(new Date());
       setLoading(false);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       setLoading(false);
+      if (isManual) {
+        mostrarMensagem('Erro ao carregar pedidos', 'erro');
+      }
+    } finally {
+      if (isManual) setAtualizando(false);
     }
   };
+
+  // Solicitar permissão para notificações
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Alterar status do pedido
   const abrirModalConfirmacao = (pedido, novoStatus) => {
@@ -61,7 +138,7 @@ export default function Pedidos() {
     
     try {
       await api.patch(`/api/admin/${tenantSlug}/pedidos/${pedido._id}`, { status: novoStatus });
-      carregarPedidos();
+      carregarPedidos(false);
       mostrarMensagem('Status alterado com sucesso!', 'sucesso');
       fecharModalConfirmacao();
     } catch (error) {
@@ -97,6 +174,17 @@ export default function Pedidos() {
     return <span className={`status-badge status-${status}`}>{info.label}</span>;
   };
 
+  // Contar pedidos por status
+  const contarPorStatus = (status) => {
+    if (status === 'todos') return pedidos.length;
+    return pedidos.filter(p => p.status === status).length;
+  };
+
+  // Filtrar pedidos para exibição (apenas status)
+  const pedidosFiltrados = filtroStatus === 'todos' 
+    ? pedidos 
+    : pedidos.filter(p => p.status === filtroStatus);
+
   // Obter opções de status disponíveis (exceto o atual)
   const getOpcoesStatus = (statusAtual) => {
     const todosStatus = [
@@ -129,18 +217,97 @@ export default function Pedidos() {
 
   return (
     <div className="pedidos-container">
+      {/* Guia Simplificado - Primeira Visita */}
+      {/* DESABILITADO - {mostrarGuia && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '100%',
+            padding: '30px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center' }}>
+              🔔 Bem-vindo aos Pedidos!
+            </h2>
+            
+            <div style={{ fontSize: '16px', lineHeight: '1.8', marginBottom: '24px' }}>
+              <p style={{ marginBottom: '16px' }}>
+                <strong style={{ color: '#f97316', fontSize: '20px' }}>✨ É automático!</strong><br/>
+                A lista atualiza sozinha a cada 15 segundos.
+              </p>
+              
+              <p style={{ marginBottom: '16px' }}>
+                <strong style={{ color: '#f97316', fontSize: '20px' }}>🔊 Você vai ouvir um "bip"</strong><br/>
+                Quando chegar um pedido novo.
+              </p>
+              
+              <p style={{ marginBottom: '0' }}>
+                <strong style={{ color: '#f97316', fontSize: '20px' }}>� Aparece um botão laranja</strong><br/>
+                Clique nele para ver os pedidos novos.
+              </p>
+            </div>
+            
+            <button
+              onClick={() => {
+                setMostrarGuia(false);
+                localStorage.setItem('guia_pedidos_visto', 'true');
+              }}
+              style={{
+                width: '100%',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                fontWeight: 'bold',
+                padding: '14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '16px',
+                cursor: 'pointer'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#2563eb'}
+            >
+              Entendi! �
+            </button>
+          </div>
+        </div> */}
+      {/* )} FIM DO GUIA DESABILITADO */}
+
       {/* Toast de mensagem */}
       {mensagem.texto && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg ${
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg animate-slideIn ${
           mensagem.tipo === 'sucesso' 
             ? 'bg-green-500 text-white' 
+            : mensagem.tipo === 'info'
+            ? 'bg-blue-500 text-white'
+            : mensagem.tipo === 'novo'
+            ? 'bg-orange-500 text-white border-2 border-orange-300'
             : 'bg-red-500 text-white'
         }`}>
           <span className="text-2xl">
-            {mensagem.tipo === 'sucesso' ? '✅' : '⚠️'}
+            {mensagem.tipo === 'sucesso' ? '✅' : 
+             mensagem.tipo === 'info' ? '✨' : 
+             mensagem.tipo === 'novo' ? '🔔' : '⚠️'}
           </span>
           <div className="flex-1">
-            <p className="font-semibold">{mensagem.tipo === 'sucesso' ? 'Sucesso!' : 'Atenção!'}</p>
+            <p className="font-semibold">
+              {mensagem.tipo === 'sucesso' ? 'Sucesso!' : 
+               mensagem.tipo === 'info' ? 'Atualizado!' : 
+               mensagem.tipo === 'novo' ? 'Novo Pedido!' : 'Atenção!'}
+            </p>
             <p>{mensagem.texto}</p>
           </div>
           <button
@@ -155,54 +322,115 @@ export default function Pedidos() {
       )}
 
       <div className="pedidos-header">
-        <h1>📦 Pedidos Online</h1>
-        <button className="btn-atualizar" onClick={carregarPedidos}>
-          🔄 Atualizar
-        </button>
+        <div>
+          <h1>📦 Gerenciar Pedidos</h1>
+          {ultimaAtualizacao && (
+            <p className="text-xs text-gray-500 mt-1">
+              Atualização automática a cada 15s • Última: {ultimaAtualizacao.toLocaleTimeString('pt-BR')}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {novosPedidos > 0 && (
+            <button
+              onClick={() => {
+                setFiltroStatus('recebido');
+                setNovosPedidos(0);
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 animate-pulse font-bold shadow-lg transition-all"
+              title="Clique para ver os novos pedidos"
+            >
+              <BellRing className="w-5 h-5" />
+              <span>{novosPedidos} novo(s)!</span>
+            </button>
+          )}
+          <button 
+            className={`btn-atualizar ${atualizando ? 'atualizando' : ''}`}
+            onClick={() => carregarPedidos(true)}
+            disabled={atualizando}
+            title="Forçar atualização agora (atualiza automaticamente a cada 15s)"
+          >
+            <RefreshCw className={`w-4 sm:w-5 ${atualizando ? 'animate-spin' : ''}`} />
+            <span>{atualizando ? 'Atualizando...' : 'Atualizar'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Filtros de Status */}
       <div className="filtros-status">
         <button 
           className={filtroStatus === 'todos' ? 'filtro-ativo' : ''}
-          onClick={() => setFiltroStatus('todos')}
+          onClick={() => {
+            setFiltroStatus('todos');
+            setNovosPedidos(0);
+          }}
         >
-          Todos ({pedidos.length})
+          📋 Todos ({contarPorStatus('todos')})
         </button>
         <button 
           className={filtroStatus === 'recebido' ? 'filtro-ativo' : ''}
-          onClick={() => setFiltroStatus('recebido')}
+          onClick={() => {
+            setFiltroStatus('recebido');
+            setNovosPedidos(0);
+          }}
         >
-          🔔 Novos
+          ⏳ Aguardando ({contarPorStatus('recebido')})
         </button>
         <button 
           className={filtroStatus === 'preparando' ? 'filtro-ativo' : ''}
-          onClick={() => setFiltroStatus('preparando')}
+          onClick={() => {
+            setFiltroStatus('preparando');
+            setNovosPedidos(0);
+          }}
         >
-          👨‍🍳 Preparando
+          👨‍🍳 Preparando ({contarPorStatus('preparando')})
         </button>
         <button 
           className={filtroStatus === 'pronto' ? 'filtro-ativo' : ''}
-          onClick={() => setFiltroStatus('pronto')}
+          onClick={() => {
+            setFiltroStatus('pronto');
+            setNovosPedidos(0);
+          }}
         >
-          ✅ Prontos
+          ✅ Pronto ({contarPorStatus('pronto')})
         </button>
         <button 
           className={filtroStatus === 'saiu_entrega' ? 'filtro-ativo' : ''}
-          onClick={() => setFiltroStatus('saiu_entrega')}
+          onClick={() => {
+            setFiltroStatus('saiu_entrega');
+            setNovosPedidos(0);
+          }}
         >
-          🚚 Em Entrega
+          🚚 Saiu para Entrega ({contarPorStatus('saiu_entrega')})
+        </button>
+        <button 
+          className={filtroStatus === 'entregue' ? 'filtro-ativo' : ''}
+          onClick={() => {
+            setFiltroStatus('entregue');
+            setNovosPedidos(0);
+          }}
+        >
+          ✓ Entregue ({contarPorStatus('entregue')})
+        </button>
+        <button 
+          className={filtroStatus === 'cancelado' ? 'filtro-ativo' : ''}
+          onClick={() => {
+            setFiltroStatus('cancelado');
+            setNovosPedidos(0);
+          }}
+        >
+          ✗ Cancelado ({contarPorStatus('cancelado')})
         </button>
       </div>
 
       {/* Lista de Pedidos */}
-      {pedidos.length === 0 ? (
+      {pedidosFiltrados.length === 0 ? (
         <div className="sem-pedidos">
           <p>📭 Nenhum pedido encontrado</p>
         </div>
       ) : (
         <div className="pedidos-grid">
-          {pedidos.map(pedido => (
+          {pedidosFiltrados.map(pedido => (
             <div key={pedido._id} className="pedido-card">
               <div className="pedido-header-card">
                 <div>

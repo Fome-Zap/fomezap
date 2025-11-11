@@ -27,6 +27,8 @@ app.use('/fotos-padrao', express.static(path.join(__dirname, 'public', 'fotos-pa
 app.use(cors({
     credentials: true, 
     origin: [
+        "http://localhost",
+        "http://localhost:80",
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",

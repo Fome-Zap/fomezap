@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/api';
 import ModalSelecionarEmoji from '../../components/ModalSelecionarEmoji';
+import ModalConfirmacao from '../../components/ModalConfirmacao';
 
 const TENANT_ID = 'demo';
 
@@ -11,7 +12,9 @@ function Categorias() {
   const [erro, setErro] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [modalEmojiAberto, setModalEmojiAberto] = useState(false);
+  const [modalDeletarAberto, setModalDeletarAberto] = useState(false);
   const [categoriaEditando, setCategoriaEditando] = useState(null);
+  const [categoriaDeletar, setCategoriaDeletar] = useState(null);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
   const [formData, setFormData] = useState({
     nome: '',
@@ -110,18 +113,23 @@ function Categorias() {
       return;
     }
 
-    if (!confirm(`Tem certeza que deseja deletar a categoria "${categoria.nome}"?`)) {
-      return;
-    }
+    setCategoriaDeletar(categoria);
+    setModalDeletarAberto(true);
+  };
+
+  const confirmarDeletar = async () => {
+    if (!categoriaDeletar) return;
 
     try {
-      const response = await api.delete(`/api/admin/${TENANT_ID}/categorias/${categoria._id}`);
+      const response = await api.delete(`/api/admin/${TENANT_ID}/categorias/${categoriaDeletar._id}`);
       mostrarMensagem(response.data.message, 'sucesso');
       carregarCategorias();
     } catch (error) {
       console.error('Erro:', error);
       const mensagemErro = error.response?.data?.error || error.response?.data?.mensagem || 'Erro ao deletar categoria';
       mostrarMensagem(mensagemErro, 'erro');
+    } finally {
+      setCategoriaDeletar(null);
     }
   };
 
@@ -185,13 +193,13 @@ function Categorias() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Gerenciar Categorias</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Categorias</h1>
         <button
           onClick={() => abrirModal()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           Nova Categoria
@@ -209,32 +217,36 @@ function Categorias() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {categorias.map((categoria) => (
-            <div key={categoria._id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-4xl">{categoria.icone}</span>
-                  <div>
-                    <h3 className="font-bold text-lg">{categoria.nome}</h3>
-                    <p className="text-sm text-gray-500">{categoria.totalProdutos} produto(s)</p>
-                  </div>
+            <div key={categoria._id} className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex flex-col">
+              {/* Emoji e Nome */}
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-4xl flex-shrink-0">{categoria.icone}</span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-base">{categoria.nome}</h3>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs ${categoria.ativa ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              </div>
+              
+              {/* Informações */}
+              <div className="space-y-2 mb-3">
+                <p className="text-sm text-gray-600">{categoria.totalProdutos} produto(s)</p>
+                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${categoria.ativa ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                   {categoria.ativa ? 'Ativa' : 'Inativa'}
                 </span>
               </div>
               
-              <div className="flex gap-2">
+              {/* Botões */}
+              <div className="flex gap-2 mt-auto">
                 <button
                   onClick={() => abrirModal(categoria)}
-                  className="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded hover:bg-blue-100"
+                  className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 text-sm font-medium"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => handleDeletar(categoria)}
-                  className="flex-1 bg-red-50 text-red-600 px-4 py-2 rounded hover:bg-red-100"
+                  className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={categoria.totalProdutos > 0}
                 >
                   Deletar
@@ -331,6 +343,21 @@ function Categorias() {
           setFormData({ ...formData, icone: emoji });
           setModalEmojiAberto(false);
         }}
+      />
+
+      {/* Modal de Confirmação de Exclusão */}
+      <ModalConfirmacao
+        aberto={modalDeletarAberto}
+        onFechar={() => {
+          setModalDeletarAberto(false);
+          setCategoriaDeletar(null);
+        }}
+        onConfirmar={confirmarDeletar}
+        titulo="Deletar Categoria"
+        mensagem={`Tem certeza que deseja deletar a categoria "${categoriaDeletar?.nome}"?`}
+        textoBotaoConfirmar="Deletar"
+        textoBotaoCancelar="Cancelar"
+        tipo="danger"
       />
     </div>
   );
