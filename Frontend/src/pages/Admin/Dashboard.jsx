@@ -1,144 +1,453 @@
-// src/pages/Admin/Dashboard.jsx - Página principal do admin
+// src/pages/Admin/Dashboard.jsx - Dashboard com análise de pedidos e faturamento
 import { useState, useEffect } from 'react';
-
-const TENANT_ID = 'demo'; // Fixo por enquanto (sem login)
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Package, Clock, Award } from 'lucide-react';
+import './Dashboard.css';
+import api from '../../api/api';
 
 function Dashboard() {
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pedidos, setPedidos] = useState([]);
+  const tenantSlug = 'demo';
+  
+  // Filtro de data
+  const [filtroData, setFiltroData] = useState('hoje');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [mostrarCalendario, setMostrarCalendario] = useState(false);
 
   useEffect(() => {
-    carregarEstatisticas();
+    // Definir datas ANTES de carregar pedidos
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dataHoje = formatarDataInput(hoje);
+    
+    setDataInicio(dataHoje);
+    setDataFim(dataHoje);
+    setFiltroData('hoje');
+    
+    // Pequeno delay para garantir que os estados foram atualizados
+    setTimeout(() => {
+      carregarPedidos();
+    }, 100);
   }, []);
 
-  const carregarEstatisticas = async () => {
+  useEffect(() => {
+    // Recarregar quando mudar período (mas não na primeira vez)
+    if (dataInicio && dataFim && pedidos.length > 0) {
+      // Apenas filtra, não precisa buscar novamente
+    }
+  }, [dataInicio, dataFim]);
+
+  // Funções auxiliares para datas
+  const obterDataHoje = () => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return hoje;
+  };
+
+  const obterDataOntem = () => {
+    const ontem = new Date();
+    ontem.setDate(ontem.getDate() - 1);
+    ontem.setHours(0, 0, 0, 0);
+    return ontem;
+  };
+
+  const obterData7DiasAtras = () => {
+    const data = new Date();
+    data.setDate(data.getDate() - 7);
+    data.setHours(0, 0, 0, 0);
+    return data;
+  };
+
+  const formatarDataInput = (date) => {
+    const ano = date.getFullYear();
+    const mes = String(date.getMonth() + 1).padStart(2, '0');
+    const dia = String(date.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const aplicarFiltroData = (tipo) => {
+    setFiltroData(tipo);
+    setMostrarCalendario(false);
+    
+    const hoje = obterDataHoje();
+    
+    switch (tipo) {
+      case 'hoje':
+        setDataInicio(formatarDataInput(hoje));
+        setDataFim(formatarDataInput(hoje));
+        break;
+      case 'ontem':
+        const ontem = obterDataOntem();
+        setDataInicio(formatarDataInput(ontem));
+        setDataFim(formatarDataInput(ontem));
+        break;
+      case '7dias':
+        const seteAtras = obterData7DiasAtras();
+        setDataInicio(formatarDataInput(seteAtras));
+        setDataFim(formatarDataInput(hoje));
+        break;
+      case 'personalizado':
+        setMostrarCalendario(true);
+        if (!dataInicio) setDataInicio(formatarDataInput(hoje));
+        if (!dataFim) setDataFim(formatarDataInput(hoje));
+        break;
+    }
+  };
+
+  const carregarPedidos = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/${TENANT_ID}/dashboard`);
-      const data = await response.json();
-      setStats(data);
+      setLoading(true);
+      const response = await api.get(`/api/admin/${tenantSlug}/pedidos`);
+      const pedidosRecebidos = response.data.pedidos || [];
+      setPedidos(pedidosRecebidos);
     } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
+      console.error('Erro ao carregar pedidos:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Filtrar pedidos por data
+  const filtrarPorData = (pedido) => {
+    if (!dataInicio || !dataFim) return true;
+    
+    const dataPedido = new Date(pedido.createdAt);
+    
+    // Criar datas de início e fim considerando o horário local
+    const [anoInicio, mesInicio, diaInicio] = dataInicio.split('-').map(Number);
+    const inicio = new Date(anoInicio, mesInicio - 1, diaInicio, 0, 0, 0, 0);
+    
+    const [anoFim, mesFim, diaFim] = dataFim.split('-').map(Number);
+    const fim = new Date(anoFim, mesFim - 1, diaFim, 23, 59, 59, 999);
+    
+    return dataPedido >= inicio && dataPedido <= fim;
+  };
+
+  const pedidosFiltrados = pedidos.filter(p => filtrarPorData(p));
+
+  // Cálculos de KPIs
+  const calcularFaturamento = () => {
+    return pedidosFiltrados
+      .filter(p => p.status !== 'cancelado')
+      .reduce((total, pedido) => {
+        // Pedidos podem ter 'total' ou 'valorTotal'
+        const valor = pedido.valorTotal || pedido.total || 0;
+        return total + valor;
+      }, 0);
+  };
+
+  const calcularTicketMedio = () => {
+    const pedidosValidos = pedidosFiltrados.filter(p => p.status !== 'cancelado');
+    if (pedidosValidos.length === 0) return 0;
+    return calcularFaturamento() / pedidosValidos.length;
+  };
+
+  const contarPorStatus = (status) => {
+    return pedidosFiltrados.filter(p => p.status === status).length;
+  };
+
+  const calcularEmAndamento = () => {
+    return contarPorStatus('recebido') + contarPorStatus('preparando') + contarPorStatus('pronto') + contarPorStatus('saiu_entrega');
+  };
+
+  const calcularFinalizados = () => {
+    return contarPorStatus('entregue');
+  };
+
+  // Top 5 produtos mais vendidos
+  const calcularTopProdutos = () => {
+    const produtosMap = {};
+    
+    pedidosFiltrados
+      .filter(p => p.status !== 'cancelado')
+      .forEach(pedido => {
+        if (!pedido.itens || !Array.isArray(pedido.itens)) return;
+        
+        pedido.itens.forEach(item => {
+          if (!produtosMap[item.nome]) {
+            produtosMap[item.nome] = {
+              nome: item.nome,
+              quantidade: 0,
+              faturamento: 0
+            };
+          }
+          produtosMap[item.nome].quantidade += item.quantidade || 0;
+          
+          // Calcular faturamento: pode ser precoUnitario, preco, ou valorUnitario
+          const preco = item.precoUnitario || item.preco || item.valorUnitario || 0;
+          const quantidade = item.quantidade || 0;
+          produtosMap[item.nome].faturamento += preco * quantidade;
+        });
+      });
+    
+    return Object.values(produtosMap)
+      .sort((a, b) => b.quantidade - a.quantidade)
+      .slice(0, 5);
+  };
+
+  // Faturamento por dia (últimos 7 dias)
+  const calcularFaturamentoPorDia = () => {
+    const faturamentoDias = {};
+    const hoje = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const data = new Date(hoje);
+      data.setDate(data.getDate() - i);
+      const dataKey = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      faturamentoDias[dataKey] = 0;
+    }
+    
+    pedidosFiltrados
+      .filter(p => p.status !== 'cancelado')
+      .forEach(pedido => {
+        const dataPedido = new Date(pedido.createdAt);
+        const dataKey = dataPedido.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        if (faturamentoDias.hasOwnProperty(dataKey)) {
+          const valor = pedido.valorTotal || pedido.total || 0;
+          faturamentoDias[dataKey] += valor;
+        }
+      });
+    
+    return faturamentoDias;
+  };
+
+  // Horários de pico
+  const calcularHorariosPico = () => {
+    const horariosMap = {};
+    
+    pedidosFiltrados.forEach(pedido => {
+      const hora = new Date(pedido.createdAt).getHours();
+      const faixa = `${hora}h-${hora + 1}h`;
+      horariosMap[faixa] = (horariosMap[faixa] || 0) + 1;
+    });
+    
+    return Object.entries(horariosMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+  };
+
+  const topProdutos = calcularTopProdutos();
+  const faturamentoPorDia = calcularFaturamentoPorDia();
+  const horariosPico = calcularHorariosPico();
+  const maxFaturamento = Math.max(...Object.values(faturamentoPorDia), 1);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
+          <p className="mt-4 text-gray-600">Carregando dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+    <div className="dashboard-container">
+      <h1 className="dashboard-title">📊 Dashboard - Análise de Negócio</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Card Categorias */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Categorias</p>
-              <p className="text-3xl font-bold mt-2">{stats?.categorias || 0}</p>
+      {/* Filtro de Data */}
+      <div className="filtro-data-dashboard">
+        <div className="filtro-data-opcoes">
+          <Calendar className="w-5 h-5 text-gray-600" />
+          <button
+            className={filtroData === 'hoje' ? 'filtro-data-ativo' : ''}
+            onClick={() => aplicarFiltroData('hoje')}
+          >
+            Hoje
+          </button>
+          <button
+            className={filtroData === 'ontem' ? 'filtro-data-ativo' : ''}
+            onClick={() => aplicarFiltroData('ontem')}
+          >
+            Ontem
+          </button>
+          <button
+            className={filtroData === '7dias' ? 'filtro-data-ativo' : ''}
+            onClick={() => aplicarFiltroData('7dias')}
+          >
+            Últimos 7 dias
+          </button>
+          <button
+            className={filtroData === 'personalizado' ? 'filtro-data-ativo' : ''}
+            onClick={() => aplicarFiltroData('personalizado')}
+          >
+            📅 Personalizado
+          </button>
+        </div>
+
+        {mostrarCalendario && (
+          <div className="filtro-data-calendario">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">De:</label>
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={(e) => setDataInicio(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Até:</label>
+                <input
+                  type="date"
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm"
+                />
+              </div>
             </div>
-            <div className="bg-blue-100 rounded-full p-3">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </div>
+          </div>
+        )}
+      </div>
+
+      {/* KPIs Principais */}
+      <div className="kpis-principais">
+        {/* Faturamento */}
+        <div className="kpi-card destaque">
+          <div className="kpi-icon">
+            <DollarSign className="w-8 h-8" />
+          </div>
+          <div className="kpi-content">
+            <p className="kpi-label">Faturamento Total</p>
+            <p className="kpi-valor-grande">R$ {calcularFaturamento().toFixed(2).replace('.', ',')}</p>
           </div>
         </div>
 
-        {/* Card Produtos */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Total Produtos</p>
-              <p className="text-3xl font-bold mt-2">{stats?.produtos || 0}</p>
-            </div>
-            <div className="bg-green-100 rounded-full p-3">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
+        {/* Total de Pedidos */}
+        <div className="kpi-card">
+          <div className="kpi-icon blue">
+            <Package className="w-8 h-8" />
+          </div>
+          <div className="kpi-content">
+            <p className="kpi-label">Total de Pedidos</p>
+            <p className="kpi-valor">{pedidosFiltrados.length}</p>
           </div>
         </div>
 
-        {/* Card Produtos Disponíveis */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Disponíveis</p>
-              <p className="text-3xl font-bold mt-2 text-green-600">{stats?.produtosDisponiveis || 0}</p>
-            </div>
-            <div className="bg-emerald-100 rounded-full p-3">
-              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
+        {/* Ticket Médio */}
+        <div className="kpi-card">
+          <div className="kpi-icon green">
+            <TrendingUp className="w-8 h-8" />
           </div>
-        </div>
-
-        {/* Card Extras */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium">Extras</p>
-              <p className="text-3xl font-bold mt-2">{stats?.extras || 0}</p>
-            </div>
-            <div className="bg-purple-100 rounded-full p-3">
-              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </div>
+          <div className="kpi-content">
+            <p className="kpi-label">Ticket Médio</p>
+            <p className="kpi-valor">R$ {calcularTicketMedio().toFixed(2).replace('.', ',')}</p>
           </div>
         </div>
       </div>
 
-      {/* Ações Rápidas */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">Ações Rápidas</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <a href="/admin/categorias" className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 transition-colors overflow-hidden">
-            <div className="bg-blue-100 rounded-full p-3 flex-shrink-0">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900">Gerenciar Categorias</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Criar e organizar categorias</p>
-            </div>
-          </a>
+      {/* Cards de Status */}
+      <div className="kpis-status">
+        <div className="status-card aguardando">
+          <div className="status-icon">⏳</div>
+          <div>
+            <p className="status-valor">{contarPorStatus('recebido')}</p>
+            <p className="status-label">Aguardando</p>
+          </div>
+        </div>
 
-          <a href="/admin/produtos" className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 transition-colors overflow-hidden">
-            <div className="bg-green-100 rounded-full p-3 flex-shrink-0">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900">Gerenciar Produtos</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Adicionar e editar produtos</p>
-            </div>
-          </a>
+        <div className="status-card em-andamento">
+          <div className="status-icon">🔥</div>
+          <div>
+            <p className="status-valor">{calcularEmAndamento()}</p>
+            <p className="status-label">Em Andamento</p>
+          </div>
+        </div>
 
-          <a href="/admin/extras" className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 transition-colors overflow-hidden">
-            <div className="bg-purple-100 rounded-full p-3 flex-shrink-0">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
+        <div className="status-card finalizados">
+          <div className="status-icon">✅</div>
+          <div>
+            <p className="status-valor">{calcularFinalizados()}</p>
+            <p className="status-label">Finalizados</p>
+          </div>
+        </div>
+
+        <div className="status-card cancelados">
+          <div className="status-icon">❌</div>
+          <div>
+            <p className="status-valor">{contarPorStatus('cancelado')}</p>
+            <p className="status-label">Cancelados</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Gráfico de Faturamento */}
+      <div className="grafico-container">
+        <h2 className="secao-titulo">📊 Faturamento - Últimos 7 Dias</h2>
+        <div className="grafico-barras">
+          {Object.entries(faturamentoPorDia).map(([dia, valor]) => (
+            <div key={dia} className="barra-wrapper">
+              <div 
+                className="barra" 
+                style={{ height: `${(valor / maxFaturamento) * 100}%` }}
+                title={`R$ ${valor.toFixed(2)}`}
+              >
+                <span className="barra-valor">R$ {valor.toFixed(0)}</span>
+              </div>
+              <span className="barra-label">{dia}</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900">Gerenciar Extras</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Adicionais e complementos</p>
-            </div>
-          </a>
+          ))}
+        </div>
+      </div>
+
+      {/* Top Produtos e Horários */}
+      <div className="grid-2cols">
+        {/* Top 5 Produtos */}
+        <div className="card-analise">
+          <h2 className="secao-titulo">
+            <Award className="w-6 h-6 inline-block mr-2" />
+            Top 5 Produtos Mais Vendidos
+          </h2>
+          <div className="lista-produtos">
+            {topProdutos.length === 0 ? (
+              <p className="texto-vazio">Nenhum produto vendido no período</p>
+            ) : (
+              topProdutos.map((produto, index) => (
+                <div key={index} className="produto-item">
+                  <div className="produto-posicao">{index + 1}º</div>
+                  <div className="produto-info">
+                    <p className="produto-nome">{produto.nome}</p>
+                    <p className="produto-detalhes">
+                      {produto.quantidade} vendidos • R$ {produto.faturamento.toFixed(2).replace('.', ',')}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Horários de Pico */}
+        <div className="card-analise">
+          <h2 className="secao-titulo">
+            <Clock className="w-6 h-6 inline-block mr-2" />
+            Horários de Pico
+          </h2>
+          <div className="lista-horarios">
+            {horariosPico.length === 0 ? (
+              <p className="texto-vazio">Sem dados de horários no período</p>
+            ) : (
+              horariosPico.map(([horario, quantidade], index) => (
+                <div key={index} className="horario-item">
+                  <div className="horario-badge">🕐 {horario}</div>
+                  <div className="horario-info">
+                    <div className="horario-barra">
+                      <div 
+                        className="horario-progresso" 
+                        style={{ width: `${(quantidade / pedidosFiltrados.length) * 100}%` }}
+                      />
+                    </div>
+                    <p className="horario-percentual">
+                      {quantidade} pedidos ({((quantidade / pedidosFiltrados.length) * 100).toFixed(0)}%)
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: fomezap-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: fomezap123
+      MONGO_INITDB_DATABASE: fomezap
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - fomezap-network
+
+  # Backend (Node.js)
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: fomezap-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:fomezap123@mongodb:27017/fomezap?authSource=admin
+      JWT_SECRET: seu-jwt-secret-super-seguro-aqui-change-me
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:80
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./Backend/uploads:/app/uploads
+    networks:
+      - fomezap-network
+
+  # Frontend (React + Vite com Nginx)
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: fomezap-frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - fomezap-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  fomezap-network:
+    driver: bridge

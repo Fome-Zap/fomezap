@@ -261,7 +261,7 @@ function FomeZapExact() {
         ...produto,
         quantidade: 1,
         extras: extrasEscolhidos,
-        observacao: '' // Campo de observação vazio inicialmente
+        observacoes: '' // Campo de observações vazio inicialmente
       };
       console.log('✅ Novo item no carrinho:', novoItem);
       setCarrinho([...carrinho, novoItem]);
@@ -301,9 +301,9 @@ function FomeZapExact() {
     setCarrinho(carrinho.filter((item, i) => i !== index));
   };
 
-  const atualizarObservacao = (index, observacao) => {
+  const atualizarObservacao = (index, observacoes) => {
     setCarrinho(carrinho.map((item, i) => 
-      i === index ? { ...item, observacao } : item
+      i === index ? { ...item, observacoes } : item
     ));
   };
 
@@ -356,7 +356,7 @@ function FomeZapExact() {
               nome: extra.nome,
               preco: extra.preco || 0
             })) : [],
-            observacoes: item.observacao || '',
+            observacoes: item.observacoes || '',
             subtotal: (item.preco + extrasPreco) * item.quantidade
           };
         }),
@@ -414,8 +414,8 @@ function FomeZapExact() {
           mensagem += `   Extras: ${item.extras.map(extra => extra.nome).join(', ')}\n`;
         }
         
-        if (item.observacao && item.observacao.trim() !== '') {
-          mensagem += `   📝 Obs: ${item.observacao}\n`;
+        if (item.observacoes && item.observacoes.trim() !== '') {
+          mensagem += `   📝 Obs: ${item.observacoes}\n`;
         }
         
         mensagem += `   Subtotal: R$ ${formatarPreco(precoTotal)}\n\n`;
@@ -762,7 +762,7 @@ function FomeZapExact() {
                   <input 
                     type="text" 
                     placeholder="Observações: sem cebola, ponto da carne..."
-                    value={item.observacao || ''}
+                    value={item.observacoes || ''}
                     onChange={(e) => atualizarObservacao(index, e.target.value)}
                     className="obs-input-full"
                   />

@@ -135,11 +135,15 @@ export default function Checkout() {
       const pedido = {
         cliente,
         itens: carrinho.map(item => ({
-          produtoId: item._id,
+          produtoId: item._id, // Garantir que está usando _id do produto
           nome: item.nome,
           preco: item.preco,
           quantidade: item.quantidade,
-          extras: item.extras || [],
+          extras: (item.extras || []).map(extra => ({
+            id: extra._id || extra.id,
+            nome: extra.nome,
+            preco: extra.preco
+          })),
           observacoes: item.observacoes || ''
         })),
         entrega: {
@@ -155,21 +159,22 @@ export default function Checkout() {
       };
 
       console.log('📤 Enviando pedido:', pedido);
-      console.log('🔍 Itens detalhados:', pedido.itens.map(i => ({ 
-        nome: i.nome, 
-        produtoId: i.produtoId,
-        _id: i._id 
-      })));
+      console.log('🔍 URL da API:', `${API_URL}/pedidos?tenant=${tenantId}`);
+      console.log('📦 Itens detalhados:', JSON.stringify(pedido.itens, null, 2));
 
-      const response = await fetch(`${API_URL}/${tenantId}/pedidos`, {
+      const response = await fetch(`${API_URL}/pedidos?tenant=${tenantId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pedido)
       });
 
+      console.log('📊 Status da resposta:', response.status);
+      
       const data = await response.json();
+      console.log('📥 Resposta completa do servidor:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
+        console.error('❌ Erro do servidor (status ' + response.status + '):', JSON.stringify(data, null, 2));
         throw new Error(data.message || 'Erro ao finalizar pedido');
       }
 
@@ -180,7 +185,8 @@ export default function Checkout() {
       navigate(`/pedido-confirmado?tenant=${tenantId}&numero=${data.pedido.numeroPedido}&whatsapp=${encodeURIComponent(data.whatsappUrl)}`);
 
     } catch (error) {
-      console.error('Erro ao finalizar pedido:', error);
+      console.error('❌ Erro ao finalizar pedido:', error);
+      console.error('❌ Detalhes:', error.message);
       setErro(error.message || 'Erro ao processar pedido. Tente novamente.');
     } finally {
       setLoading(false);

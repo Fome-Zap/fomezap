@@ -4,6 +4,7 @@ import { useCurrencyInput } from '../../hooks/useCurrencyInput.js';
 import api from '../../api/api';
 import SeletorImagemProduto from '../../components/SeletorImagemProduto';
 import { getImageUrl } from '../../config/api';
+import ModalConfirmacao from '../../components/ModalConfirmacao';
 
 const TENANT_ID = 'demo';
 
@@ -14,7 +15,9 @@ function Produtos() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalDeletarAberto, setModalDeletarAberto] = useState(false);
   const [produtoEditando, setProdutoEditando] = useState(null);
+  const [produtoDeletar, setProdutoDeletar] = useState(null);
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
   
@@ -170,18 +173,23 @@ function Produtos() {
   };
 
   const handleDeletar = async (produto) => {
-    if (!confirm(`Tem certeza que deseja deletar "${produto.nome}"?`)) {
-      return;
-    }
+    setProdutoDeletar(produto);
+    setModalDeletarAberto(true);
+  };
+
+  const confirmarDeletar = async () => {
+    if (!produtoDeletar) return;
 
     try {
-      const response = await api.delete(`/api/admin/${TENANT_ID}/produtos/${produto._id}`);
+      const response = await api.delete(`/api/admin/${TENANT_ID}/produtos/${produtoDeletar._id}`);
       mostrarMensagem(response.data.message, 'sucesso');
       carregarDados();
     } catch (error) {
       console.error('Erro:', error);
       const mensagemErro = error.response?.data?.error || error.response?.data?.mensagem || 'Erro ao deletar produto';
       mostrarMensagem(mensagemErro, 'erro');
+    } finally {
+      setProdutoDeletar(null);
     }
   };
 
@@ -265,13 +273,13 @@ function Produtos() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Gerenciar Produtos</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Produtos</h1>
         <button
           onClick={() => abrirModal()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           Novo Produto
@@ -306,12 +314,12 @@ function Produtos() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {produtosFiltrados.map((produto) => (
-            <div key={produto._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-3">
+            <div key={produto._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-3 flex flex-col">
               <div className="flex gap-3 mb-2">
                 {/* Thumbnail da imagem/emoji */}
-                <div className="w-16 h-16 flex-shrink-0 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                <div className="w-14 h-14 flex-shrink-0 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
                   {produto.imagem ? (
                     <img
                       src={getImageUrl(produto.imagem)}
@@ -320,27 +328,27 @@ function Produtos() {
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   ) : (
-                    <span className="text-3xl">{produto.emoji || '🍽️'}</span>
+                    <span className="text-2xl">{produto.emoji || '🍽️'}</span>
                   )}
                 </div>
                 
                 {/* Informações do produto */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-base line-clamp-1">{produto.nome}</h3>
-                  <p className="text-xs text-gray-500 mb-1">{produto.categoria.nome}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-bold text-green-600">
+                  <h3 className="font-bold text-sm line-clamp-2 leading-tight mb-1">{produto.nome}</h3>
+                  <p className="text-xs text-gray-500 truncate">{produto.categoria.nome}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-sm font-bold text-green-600">
                       R$ {produto.preco.toFixed(2)}
                     </span>
                     {produto.destaque && (
-                      <span className="text-sm">⭐</span>
+                      <span className="text-xs">⭐</span>
                     )}
                   </div>
                 </div>
               </div>
               
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className={`text-xs px-2 py-1 rounded font-medium ${
+                <span className={`text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 ${
                   produto.disponivel
                     ? 'bg-green-100 text-green-700'
                     : 'bg-red-100 text-red-700'
@@ -353,22 +361,22 @@ function Produtos() {
                   </span>
                 )}
                 {produto.extras?.length > 0 && (
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-medium">
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium flex-shrink-0">
                     {produto.extras.length} extra(s)
                   </span>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 mt-auto">
                 <button
                   onClick={() => abrirModal(produto)}
-                  className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-100 text-sm font-medium"
+                  className="bg-blue-50 text-blue-600 px-2 py-1.5 rounded hover:bg-blue-100 text-xs font-medium"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => handleDeletar(produto)}
-                  className="bg-red-50 text-red-600 px-3 py-1.5 rounded hover:bg-red-100 text-sm font-medium"
+                  className="bg-red-50 text-red-600 px-2 py-1.5 rounded hover:bg-red-100 text-xs font-medium"
                 >
                   Deletar
                 </button>
@@ -524,6 +532,21 @@ function Produtos() {
           </div>
         </div>
       )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      <ModalConfirmacao
+        aberto={modalDeletarAberto}
+        onFechar={() => {
+          setModalDeletarAberto(false);
+          setProdutoDeletar(null);
+        }}
+        onConfirmar={confirmarDeletar}
+        titulo="Deletar Produto"
+        mensagem={`Tem certeza que deseja deletar o produto "${produtoDeletar?.nome}"?`}
+        textoBotaoConfirmar="Deletar"
+        textoBotaoCancelar="Cancelar"
+        tipo="danger"
+      />
     </div>
   );
 }
