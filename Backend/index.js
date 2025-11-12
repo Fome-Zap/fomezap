@@ -35,7 +35,8 @@ app.use(cors({
         "http://localhost:5176",
         "http://localhost:3000",
         /^https?:\/\/[a-z0-9-]+\.fomezap\.com$/,  // Subdomínios em produção
-        /^https?:\/\/[a-z0-9-]+\.localhost:[0-9]+$/ // Subdomínios em desenvolvimento
+        /^https?:\/\/[a-z0-9-]+\.localhost:[0-9]+$/,  // Subdomínios em desenvolvimento
+        /^https:\/\/.*\.vercel\.app$/  // Qualquer deploy Vercel
     ]
 }))
 
