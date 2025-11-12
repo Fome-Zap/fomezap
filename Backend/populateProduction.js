@@ -209,12 +209,11 @@ async function popularProducao() {
 
     // 5. Criar Usuário Admin
     console.log('👤 Criando usuário admin...');
-    const senhaHash = await argon2.hash('123456');
     const admin = await User.create({
       tenantId: 'demo',
       nome: 'Administrador',
       email: 'admin@demo.com',
-      senha: senhaHash,
+      senha: '123456', // Senha sem hash - o modelo vai hashear automaticamente
       role: 'tenant_admin'
     });
     console.log(`✅ Usuário admin criado: ${admin.email}`);
