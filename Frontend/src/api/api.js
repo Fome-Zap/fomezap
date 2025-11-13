@@ -1,24 +1,33 @@
 import axios from 'axios';
 
-// Detectar se está em produção pelo hostname (mais confiável que import.meta.env.MODE)
-const isProduction = typeof window !== 'undefined' && 
-  (window.location.hostname.includes('vercel.app') || 
-   window.location.hostname.includes('fomezap.com'));
+// Detectar produção de forma confiável
+// 1. Vite define import.meta.env.PROD em builds de produção
+// 2. Fallback: verificar hostname se estiver no browser
+const isProduction = import.meta.env.PROD || 
+  (typeof window !== 'undefined' && 
+   (window.location.hostname.includes('vercel.app') || 
+    window.location.hostname.includes('fomezap.com')));
+
+const baseURL = isProduction
+  ? 'https://fomezap-api.onrender.com'
+  : 'http://localhost:5000';
 
 // Configurar base URL
 const api = axios.create({
-  baseURL: isProduction
-    ? 'https://fomezap-api.onrender.com'
-    : 'http://localhost:5000',
+  baseURL,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
+// Log para debug (sempre mostrar, para verificar)
 console.log('🔧 API configurada:', {
+  'import.meta.env.PROD': import.meta.env.PROD,
+  'import.meta.env.DEV': import.meta.env.DEV,
+  'import.meta.env.MODE': import.meta.env.MODE,
   hostname: typeof window !== 'undefined' ? window.location.hostname : 'SSR',
   isProduction,
-  baseURL: api.defaults.baseURL
+  baseURL
 });
 
 // Interceptor para adicionar token em todas as requisições
