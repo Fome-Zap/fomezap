@@ -2,7 +2,9 @@
 // Detecta automaticamente ambiente (desenvolvimento/produção)
 
 // URL base da API (backend)
-export const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+export const API_BASE_URL = import.meta.env.MODE === 'production' 
+  ? 'https://fomezap-api.onrender.com' 
+  : 'http://localhost:5000';
 
 // URL completa da API com /api
 export const API_URL = `${API_BASE_URL}/api`;
