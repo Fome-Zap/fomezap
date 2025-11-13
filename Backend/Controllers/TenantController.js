@@ -9,15 +9,19 @@ export default class TenantController {
     const hostname = req.get('host');
     let tenantId = null;
     
-    // Produção: subdomain.fomezap.com
-    if (hostname.endsWith('.fomezap.com')) {
+    // Prioridade 1: Query string (útil para desenvolvimento e deploys temporários)
+    if (req.query.tenant) {
+      tenantId = req.query.tenant;
+    }
+    // Prioridade 2: Produção com subdomain.fomezap.com
+    else if (hostname.endsWith('.fomezap.com')) {
       tenantId = hostname.replace('.fomezap.com', '');
     }
-    // Desenvolvimento: localhost com header
-    else if (hostname.includes('localhost')) {
-      tenantId = req.headers['x-tenant-id'] || req.query.tenant;
+    // Prioridade 3: Header customizado (fallback)
+    else if (req.headers['x-tenant-id']) {
+      tenantId = req.headers['x-tenant-id'];
     }
-    // Domínio customizado (consultar mapeamento)
+    // Prioridade 4: Domínio customizado (consultar mapeamento)
     else {
       tenantId = await TenantController.getTenantByDomain(hostname);
     }
