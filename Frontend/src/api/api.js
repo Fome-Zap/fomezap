@@ -1,13 +1,24 @@
 import axios from 'axios';
 
-// Configurar base URL - detecta ambiente automaticamente (SEM variáveis de ambiente)
+// Detectar se está em produção pelo hostname (mais confiável que import.meta.env.MODE)
+const isProduction = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('vercel.app') || 
+   window.location.hostname.includes('fomezap.com'));
+
+// Configurar base URL
 const api = axios.create({
-  baseURL: import.meta.env.MODE === 'production' 
+  baseURL: isProduction
     ? 'https://fomezap-api.onrender.com'
-    : (import.meta.env.DEV ? 'http://localhost:5000' : 'http://localhost:5000'),
+    : 'http://localhost:5000',
   headers: {
     'Content-Type': 'application/json'
   }
+});
+
+console.log('🔧 API configurada:', {
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'SSR',
+  isProduction,
+  baseURL: api.defaults.baseURL
 });
 
 // Interceptor para adicionar token em todas as requisições

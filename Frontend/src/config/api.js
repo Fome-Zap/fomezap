@@ -1,8 +1,13 @@
 // Configurações de API centralizadas
 // Detecta automaticamente ambiente (desenvolvimento/produção)
 
+// Detectar produção pelo hostname
+const isProduction = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('vercel.app') || 
+   window.location.hostname.includes('fomezap.com'));
+
 // URL base da API (backend)
-export const API_BASE_URL = import.meta.env.MODE === 'production' 
+export const API_BASE_URL = isProduction
   ? 'https://fomezap-api.onrender.com' 
   : 'http://localhost:5000';
 
