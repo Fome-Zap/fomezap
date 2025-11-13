@@ -1,10 +1,8 @@
 import axios from 'axios';
 
-// Configurar base URL (usa variável de ambiente em produção, localhost em desenvolvimento)
+// Configurar base URL - usa variável de ambiente em produção, localhost em desenvolvimento
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' 
-    ? 'https://fomezap-api.onrender.com' 
-    : 'http://localhost:5000'),
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
   headers: {
     'Content-Type': 'application/json'
   }
