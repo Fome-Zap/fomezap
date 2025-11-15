@@ -10,6 +10,7 @@ import publicRoutes from "./Routes/publicRoutes.js";
 import upload from "./Middlewares/upload.js";
 import { handleMulterError } from "./Middlewares/upload.js";
 import { verificarToken, verificarTenantAdmin } from "./Middlewares/auth.js";
+import detectarTenant from "./Middlewares/detectarTenant.js";
 import UploadController from "./Controllers/UploadController.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +24,9 @@ app.use(express.json())
 // Servir arquivos estáticos (uploads e fotos padrão)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/fotos-padrao', express.static(path.join(__dirname, 'public', 'fotos-padrao')));
+
+// === MIDDLEWARE DE DETECÇÃO DE TENANT (APLICAR ANTES DE TUDO) ===
+app.use(detectarTenant);
 
 //cors comunicação entre duas aplicações que rodam em portas diferentes - ADAPTADO PARA MULTI-TENANT
 app.use(cors({
@@ -38,16 +42,23 @@ app.use(cors({
             "http://localhost:5174",
             "http://localhost:5175",
             "http://localhost:5176",
-            "http://localhost:3000"
+            "http://localhost:3000",
+            "https://fomezap.netlify.app",
+            "https://demo.fomezap.com",
+            "https://familia.fomezap.com",
+            "https://lanchonete-em-familia.fomezap.com",
+            "https://thi-burg.fomezap.com"
         ];
         
         // Verificar origins permitidas ou patterns
         if (allowedOrigins.includes(origin) ||
             /^https?:\/\/[a-z0-9-]+\.fomezap\.com$/.test(origin) ||
             /^https?:\/\/[a-z0-9-]+\.localhost:[0-9]+$/.test(origin) ||
-            /^https:\/\/.*\.vercel\.app$/.test(origin)) {
+            /^https:\/\/.*\.vercel\.app$/.test(origin) ||
+            /^https:\/\/.*\.netlify\.app$/.test(origin)) {
             callback(null, true);
         } else {
+            console.warn('⚠️  Origin bloqueada pelo CORS:', origin);
             callback(new Error('Origin não permitida pelo CORS'));
         }
     }
