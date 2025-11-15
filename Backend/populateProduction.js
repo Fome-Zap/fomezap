@@ -3,8 +3,8 @@ import argon2 from 'argon2';
 import { Tenant, Categoria, Produto, Extra } from './Models/TenantModels.js';
 import User from './Models/User.js';
 
-// Conectar ao MongoDB Atlas (produção)
-const MONGODB_URI = 'mongodb+srv://tffjauds_db_user:VK8j7FSIYvV6whHh@fomezap-prod.wwj0swg.mongodb.net/fomezap?retryWrites=true&w=majority&appName=fomezap-prod';
+// Conectar ao MongoDB - Use variável de ambiente MONGODB_URI
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/FomeZap';
 
 async function popularProducao() {
   // Fechar conexão existente se houver

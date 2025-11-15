@@ -163,7 +163,7 @@ function AdminLayout() {
           <div className="border-t border-gray-200 mt-auto"></div>
 
           <a
-            href="/?tenant=demo"
+            href={`/?tenant=${user?.tenantId || 'demo'}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setMenuAberto(false)}

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import mongoose from "./db/conn.js";
 import tenantRoutes from "./Routes/tenantRoutes.js";
 import adminRoutes from "./Routes/adminRoutes.js";
 import authRoutes from "./Routes/authRoutes.js";
@@ -26,18 +27,30 @@ app.use('/fotos-padrao', express.static(path.join(__dirname, 'public', 'fotos-pa
 //cors comunicação entre duas aplicações que rodam em portas diferentes - ADAPTADO PARA MULTI-TENANT
 app.use(cors({
     credentials: true, 
-    origin: [
-        "http://localhost",
-        "http://localhost:80",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:5176",
-        "http://localhost:3000",
-        /^https?:\/\/[a-z0-9-]+\.fomezap\.com$/,  // Subdomínios em produção
-        /^https?:\/\/[a-z0-9-]+\.localhost:[0-9]+$/,  // Subdomínios em desenvolvimento
-        /^https:\/\/.*\.vercel\.app$/  // Qualquer deploy Vercel
-    ]
+    origin: function(origin, callback) {
+        // Permitir requests sem origin (mobile apps, Postman)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            "http://localhost",
+            "http://localhost:80",
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:3000"
+        ];
+        
+        // Verificar origins permitidas ou patterns
+        if (allowedOrigins.includes(origin) ||
+            /^https?:\/\/[a-z0-9-]+\.fomezap\.com$/.test(origin) ||
+            /^https?:\/\/[a-z0-9-]+\.localhost:[0-9]+$/.test(origin) ||
+            /^https:\/\/.*\.vercel\.app$/.test(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Origin não permitida pelo CORS'));
+        }
+    }
 }))
 
 // === ROTAS PÚBLICAS (SEM AUTENTICAÇÃO) ===
@@ -91,6 +104,15 @@ app.get("/detect-tenant", (req, res) => {
         tenantId,
         detected: !!tenantId,
         environment: process.env.NODE_ENV || 'development'
+    });
+});
+
+// === MIDDLEWARE 404 (deve vir antes do erro global) ===
+app.use((req, res, next) => {
+    res.status(404).json({ 
+        error: 'Rota não encontrada',
+        path: req.path,
+        method: req.method
     });
 });
 

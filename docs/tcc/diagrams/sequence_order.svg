@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="600" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .lifeline { stroke:#0f172a; stroke-width:1; }
+    .actor { font: bold 14px sans-serif; fill:#0b5cff; }
+    .note { font: 12px sans-serif; fill:#334155; }
+    .message { stroke:#1e293b; stroke-width:2; marker-end:url(#arrow); }
+    .dashed { stroke-dasharray:4 6; stroke:#94a3b8; }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1e293b" />
+    </marker>
+  </defs>
+
+  <!-- Actors -->
+  <text class="actor" x="60" y="40">Cliente</text>
+  <text class="actor" x="420" y="40">Frontend (UI)</text>
+  <text class="actor" x="820" y="40">API (Backend)</text>
+  <text class="actor" x="1080" y="40">WhatsApp</text>
+
+  <!-- Lifelines -->
+  <line class="dashed" x1="80" y1="60" x2="80" y2="520" />
+  <line class="dashed" x1="500" y1="60" x2="500" y2="520" />
+  <line class="dashed" x1="900" y1="60" x2="900" y2="520" />
+  <line class="dashed" x1="1120" y1="60" x2="1120" y2="520" />
+
+  <!-- Messages -->
+  <g>
+    <!-- 1. Cliente navega e solicita produtos -->
+    <line class="message" x1="100" y1="120" x2="420" y2="120" />
+    <text class="note" x="220" y="110">1. Acessa Cardápio (GET /:tenant/cardapio)</text>
+
+    <!-- 2. Frontend requisita dados à API -->
+    <line class="message" x1="520" y1="160" x2="880" y2="160" />
+    <text class="note" x="560" y="150">2. GET /:tenant/cardapio/produtos</text>
+
+    <!-- 3. API responde com produtos -->
+    <line class="message" x1="880" y1="190" x2="520" y2="190" />
+    <text class="note" x="560" y="180">3. 200 OK (produtos JSON)</text>
+
+    <!-- 4. Cliente adiciona produto ao carrinho (UI) -->
+    <line class="message" x1="100" y1="260" x2="420" y2="260" />
+    <text class="note" x="220" y="250">4. Clica "Adicionar" → UI abre modal extras</text>
+
+    <!-- 5. UI mantém no localStorage (cliente) -->
+    <line class="message" x1="420" y1="300" x2="420" y2="330" />
+    <text class="note" x="440" y="320">5. Persiste carrinho em localStorage</text>
+
+    <!-- 6. Cliente finaliza checkout e submete pedido -->
+    <line class="message" x1="100" y1="380" x2="420" y2="380" />
+    <text class="note" x="220" y="370">6. Checkout → envia dados</text>
+
+    <!-- 7. Frontend salva pedido na API -->
+    <line class="message" x1="520" y1="420" x2="900" y2="420" />
+    <text class="note" x="580" y="410">7. POST /:tenant/pedidos (pedidoData)</text>
+
+    <!-- 8. API persiste e retorna pedido com numeroPedido -->
+    <line class="message" x1="900" y1="450" x2="520" y2="450" />
+    <text class="note" x="580" y="440">8. 201 Created (pedido, numeroPedido)</text>
+
+    <!-- 9. Frontend cria mensagem e abre WhatsApp -->
+    <line class="message" x1="520" y1="500" x2="1120" y2="500" />
+    <text class="note" x="680" y="490">9. Abre https://wa.me/... com mensagem formatada</text>
+
+    <!-- 10. Usuário confirma envio no WhatsApp (fora do sistema) -->
+    <line class="message" x1="1120" y1="530" x2="1120" y2="560" />
+    <text class="note" x="920" y="560">10. Pedido enviado via WhatsApp</text>
+  </g>
+
+  <!-- Footer note -->
+  <text class="note" x="40" y="580">Diagrama de sequência simplificado — mostra interação cliente → frontend → API → WhatsApp para finalização de pedido.</text>
+</svg>

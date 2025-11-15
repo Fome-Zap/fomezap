@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import User from './Models/User.js';
 import { Tenant, Categoria, Produto } from './Models/TenantModels.js';
 
-const MONGODB_URI = 'mongodb+srv://tffjauds_db_user:VK8j7FSIYvV6whHh@fomezap-prod.wwj0swg.mongodb.net/fomezap';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/FomeZap';
 
 async function verificarDados() {
   try {

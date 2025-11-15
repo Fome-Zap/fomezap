@@ -28,7 +28,7 @@ services:
       NODE_ENV: production
       PORT: 5000
       MONGODB_URI: mongodb://admin:fomezap123@mongodb:27017/fomezap?authSource=admin
-      JWT_SECRET: seu-jwt-secret-super-seguro-aqui-change-me
+      JWT_SECRET: jKOonJQcxW5sYZAm8ek34uR0yrX1ga2VUIH9EtpGBqdzPDi6hNb7MvLlTwfSCF
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:80
     ports:
       - "5000:5000"

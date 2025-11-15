@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { Calendar, TrendingUp, TrendingDown, DollarSign, Package, Clock, Award } from 'lucide-react';
 import './Dashboard.css';
 import api from '../../api/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 function Dashboard() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [pedidos, setPedidos] = useState([]);
-  const tenantSlug = 'demo';
+  const tenantId = user?.tenantId; // Usar tenantId do usuário logado
   
   // Filtro de data
   const [filtroData, setFiltroData] = useState('hoje');
@@ -96,9 +98,15 @@ function Dashboard() {
   };
 
   const carregarPedidos = async () => {
+    if (!tenantId) {
+      console.warn('TenantId não disponível');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
-      const response = await api.get(`/api/admin/${tenantSlug}/pedidos`);
+      const response = await api.get(`/api/admin/${tenantId}/pedidos`);
       const pedidosRecebidos = response.data.pedidos || [];
       setPedidos(pedidosRecebidos);
     } catch (error) {

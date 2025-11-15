@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useCurrencyInput } from '../../hooks/useCurrencyInput';
 import api from '../../api/api';
 
-const TENANT_ID = 'demo';
-
 export default function Configuracoes() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
+  
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
   
@@ -39,7 +41,7 @@ export default function Configuracoes() {
   const carregarConfiguracoes = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/admin/${TENANT_ID}/configuracoes`);
+      const response = await api.get(`/api/admin/${tenantId}/configuracoes`);
       
       if (response.data) {
         setConfig(response.data);
@@ -65,7 +67,7 @@ export default function Configuracoes() {
         pedidoMinimo: pedidoMinimo.realValue
       };
 
-      const response = await api.put(`/api/admin/${TENANT_ID}/configuracoes`, payload);
+      const response = await api.put(`/api/admin/${tenantId}/configuracoes`, payload);
       setMensagem({ tipo: 'sucesso', texto: 'Configurações salvas com sucesso!' });
       // Auto-esconder após 5 segundos
       setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
@@ -392,3 +394,5 @@ export default function Configuracoes() {
     </div>
   );
 }
+
+

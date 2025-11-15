@@ -6,36 +6,47 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Criar pasta uploads se não existir
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configuração de armazenamento
+// Configuração de armazenamento com organização por tenant
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+  destination: function (req, file, cb) {
+    const { tenantId } = req.params;
+    const tipo = req.path.includes('produtos') ? 'produtos' : 
+                 req.path.includes('logo') ? 'logo' : 'categorias';
+    
+    const uploadPath = path.join(__dirname, '..', 'uploads', tenantId, tipo);
+    
+    // Criar diretório se não existir
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    
+    cb(null, uploadPath);
   },
-  filename: (req, file, cb) => {
-    // Gerar nome único: timestamp_nome-original.ext
+  filename: function (req, file, cb) {
+    // Gerar nome único: timestamp + nome original
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     const nameWithoutExt = path.basename(file.originalname, ext);
-    const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-');
-    cb(null, `${uniqueSuffix}-${sanitizedName}${ext}`);
+    
+    // Limpar nome do arquivo (remover caracteres especiais e acentos)
+    const cleanName = nameWithoutExt
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-zA-Z0-9-_]/g, '-')  // Substitui caracteres especiais por hífen
+      .toLowerCase();
+    
+    cb(null, `${cleanName}-${uniqueSuffix}${ext}`);
   }
 });
 
 // Filtro de arquivos (apenas imagens)
 const fileFilter = (req, file, cb) => {
-  // Tipos MIME aceitos
-  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   
-  if (allowedMimes.includes(file.mimetype)) {
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Tipo de arquivo inválido. Apenas JPG, PNG e WEBP são permitidos.'), false);
+    cb(new Error('Tipo de arquivo não permitido. Use JPG, PNG, GIF ou WEBP.'), false);
   }
 };
 
@@ -44,7 +55,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 500 * 1024, // 500KB em bytes
+    fileSize: 5 * 1024 * 1024 // Limite de 5MB
   }
 });
 

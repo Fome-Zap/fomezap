@@ -1,6 +1,6 @@
 // Routes/uploadRoutes.js - Rotas de upload
 import { Router } from "express";
-import upload from "../middleware/upload.js";
+import upload from "../Middlewares/upload.js";
 import UploadController from "../Controllers/UploadController.js";
 
 const router = Router();

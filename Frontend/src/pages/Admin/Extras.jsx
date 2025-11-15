@@ -1,12 +1,14 @@
 // src/pages/Admin/Extras.jsx - CRUD de Extras
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useCurrencyInput } from '../../hooks/useCurrencyInput.js';
 import api from '../../api/api';
 import ModalConfirmacao from '../../components/ModalConfirmacao';
 
-const TENANT_ID = 'demo';
-
 function Extras() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
+  
   const [extras, setExtras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
@@ -45,7 +47,7 @@ function Extras() {
     try {
       setLoading(true);
       setErro(null);
-      const response = await api.get(`/api/admin/${TENANT_ID}/extras`);
+      const response = await api.get(`/api/admin/${tenantId}/extras`);
       setExtras(response.data);
     } catch (error) {
       console.error('Erro ao carregar extras:', error);
@@ -100,10 +102,10 @@ function Extras() {
       };
 
       if (extraEditando) {
-        const response = await api.put(`/api/admin/${TENANT_ID}/extras/${extraEditando._id}`, dadosExtra);
+        const response = await api.put(`/api/admin/${tenantId}/extras/${extraEditando._id}`, dadosExtra);
         mostrarMensagem(response.data.message, 'sucesso');
       } else {
-        const response = await api.post(`/api/admin/${TENANT_ID}/extras`, dadosExtra);
+        const response = await api.post(`/api/admin/${tenantId}/extras`, dadosExtra);
         mostrarMensagem(response.data.message, 'sucesso');
       }
       
@@ -125,7 +127,7 @@ function Extras() {
     if (!extraDeletar) return;
 
     try {
-      const response = await api.delete(`/api/admin/${TENANT_ID}/extras/${extraDeletar._id}`);
+      const response = await api.delete(`/api/admin/${tenantId}/extras/${extraDeletar._id}`);
       mostrarMensagem(response.data.message, 'sucesso');
       carregarExtras();
     } catch (error) {
@@ -424,3 +426,4 @@ function Extras() {
 }
 
 export default Extras;
+
