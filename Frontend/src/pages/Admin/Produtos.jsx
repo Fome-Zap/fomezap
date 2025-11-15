@@ -1,14 +1,16 @@
 // src/pages/Admin/Produtos.jsx - CRUD de Produtos
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useCurrencyInput } from '../../hooks/useCurrencyInput.js';
 import api from '../../api/api';
 import SeletorImagemProduto from '../../components/SeletorImagemProduto';
 import { getImageUrl } from '../../config/api';
 import ModalConfirmacao from '../../components/ModalConfirmacao';
 
-const TENANT_ID = 'demo';
-
 function Produtos() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
+  
   const [produtos, setProdutos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [extras, setExtras] = useState([]);
@@ -60,9 +62,9 @@ function Produtos() {
       setLoading(true);
       setErro(null);
       const [produtosRes, categoriasRes, extrasRes] = await Promise.all([
-        api.get(`/api/admin/${TENANT_ID}/produtos`),
-        api.get(`/api/admin/${TENANT_ID}/categorias`),
-        api.get(`/api/admin/${TENANT_ID}/extras`)
+        api.get(`/api/admin/${tenantId}/produtos`),
+        api.get(`/api/admin/${tenantId}/categorias`),
+        api.get(`/api/admin/${tenantId}/extras`)
       ]);
 
       setProdutos(produtosRes.data);
@@ -156,10 +158,10 @@ function Produtos() {
       };
 
       if (produtoEditando) {
-        const response = await api.put(`/api/admin/${TENANT_ID}/produtos/${produtoEditando._id}`, dadosProduto);
+        const response = await api.put(`/api/admin/${tenantId}/produtos/${produtoEditando._id}`, dadosProduto);
         mostrarMensagem(response.data.message, 'sucesso');
       } else {
-        const response = await api.post(`/api/admin/${TENANT_ID}/produtos`, dadosProduto);
+        const response = await api.post(`/api/admin/${tenantId}/produtos`, dadosProduto);
         mostrarMensagem(response.data.message, 'sucesso');
       }
       
@@ -181,7 +183,7 @@ function Produtos() {
     if (!produtoDeletar) return;
 
     try {
-      const response = await api.delete(`/api/admin/${TENANT_ID}/produtos/${produtoDeletar._id}`);
+      const response = await api.delete(`/api/admin/${tenantId}/produtos/${produtoDeletar._id}`);
       mostrarMensagem(response.data.message, 'sucesso');
       carregarDados();
     } catch (error) {
@@ -195,7 +197,7 @@ function Produtos() {
 
   const toggleDisponibilidade = async (produto) => {
     try {
-      const response = await api.patch(`/api/admin/${TENANT_ID}/produtos/${produto._id}/toggle`);
+      const response = await api.patch(`/api/admin/${tenantId}/produtos/${produto._id}/toggle`);
       carregarDados();
     } catch (error) {
       console.error('Erro:', error);
@@ -552,3 +554,4 @@ function Produtos() {
 }
 
 export default Produtos;
+

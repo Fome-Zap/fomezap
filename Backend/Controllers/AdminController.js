@@ -20,6 +20,11 @@ export default class AdminController {
       
       console.log('✅ Categorias encontradas:', categorias.length);
       
+      // Se não há categorias, retornar array vazio (não erro)
+      if (categorias.length === 0) {
+        return res.status(200).json([]);
+      }
+      
       // Contar produtos por categoria
       const categoriasComContagem = await Promise.all(
         categorias.map(async (categoria) => {
@@ -198,7 +203,8 @@ export default class AdminController {
         .sort({ createdAt: -1 })
         .lean();
       
-      res.status(200).json(produtos);
+      // Se não há produtos, retornar array vazio (não erro)
+      res.status(200).json(produtos || []);
     } catch (error) {
       console.error('Erro ao listar produtos:', error);
       res.status(500).json({ error: 'Erro ao buscar produtos' });
@@ -395,7 +401,8 @@ export default class AdminController {
         .sort({ nome: 1 })
         .lean();
       
-      res.status(200).json(extras);
+      // Se não há extras, retornar array vazio (não erro)
+      res.status(200).json(extras || []);
     } catch (error) {
       console.error('Erro ao listar extras:', error);
       res.status(500).json({ error: 'Erro ao buscar extras' });

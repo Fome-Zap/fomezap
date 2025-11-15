@@ -1,12 +1,14 @@
 // src/pages/Admin/Categorias.jsx - CRUD de Categorias
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/api';
 import ModalSelecionarEmoji from '../../components/ModalSelecionarEmoji';
 import ModalConfirmacao from '../../components/ModalConfirmacao';
 
-const TENANT_ID = 'demo';
-
 function Categorias() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
+  
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
@@ -44,7 +46,14 @@ function Categorias() {
     try {
       setLoading(true);
       setErro(null);
-      const response = await api.get(`/api/admin/${TENANT_ID}/categorias`);
+      
+      if (!tenantId) {
+        setErro('Erro: TenantId não encontrado. Faça login novamente.');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await api.get(`/api/admin/${tenantId}/categorias`);
       setCategorias(response.data);
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
