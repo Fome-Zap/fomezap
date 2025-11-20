@@ -23,6 +23,7 @@ const tenantSchema = new Schema({
     default: "images/logo-default.png"
   },
   telefone: String,
+  email: String, // Email de contato do negócio
   endereco: String,
   
   // Configurações de funcionamento

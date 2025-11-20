@@ -43,3 +43,10 @@ coverage/
 # Uploads
 uploads/
 images/local/
+
+# Documentation (TCC and markdown docs)
+docs/
+TCC/
+
+# Utility scripts
+Backend/scripts/

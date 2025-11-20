@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FomeZap - Super Admin</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1>🔐 FomeZap Super Admin</h1>
+            <div id="status" class="status"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Botão Criar Tenant -->
+        <div class="actions">
+            <button class="btn btn-primary" onclick="abrirModalCriar()">
+                ➕ Criar Novo Tenant
+            </button>
+            <button class="btn btn-secondary" onclick="carregarTenants()">
+                🔄 Atualizar Lista
+            </button>
+        </div>
+
+        <!-- Lista de Tenants -->
+        <div id="tenantsList" class="tenants-list">
+            <div class="loading">Carregando tenants...</div>
+        </div>
+    </main>
+
+    <!-- Modal Criar/Editar Tenant -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal()">&times;</span>
+            <h2 id="modalTitulo">Criar Novo Tenant</h2>
+            
+            <form id="tenantForm">
+                <input type="hidden" id="tenantId">
+                
+                <div class="form-group">
+                    <label>Nome do Restaurante *</label>
+                    <input type="text" id="nome" required placeholder="Ex: Lanchonete do João">
+                </div>
+
+                <div class="form-group">
+                    <label>Slug (URL) *</label>
+                    <input type="text" id="slug" placeholder="Gerado automaticamente">
+                    <small>Usado no subdomínio: slug.fomezap.com</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="tel" id="telefone" placeholder="(14) 99999-9999">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" placeholder="contato@restaurante.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Endereço</label>
+                    <input type="text" id="endereco" placeholder="Rua, número - Bairro - Cidade/UF">
+                </div>
+
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="status">
+                        <option value="ativo">✅ Ativo</option>
+                        <option value="inativo">🔴 Inativo</option>
+                        <option value="trial">🎯 Trial (15 dias)</option>
+                        <option value="suspenso">⚠️ Suspenso</option>
+                    </select>
+                </div>
+
+                <div id="adminSection" class="admin-section">
+                    <hr>
+                    <h3>👤 Criar Usuário Admin</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="criarAdmin" checked>
+                            Criar usuário administrador
+                        </label>
+                    </div>
+                    <div id="adminFields">
+                        <div class="form-group">
+                            <label>Email do Admin *</label>
+                            <input type="email" id="emailAdmin" placeholder="admin@restaurante.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Senha do Admin *</label>
+                            <input type="password" id="senhaAdmin" placeholder="Mínimo 6 caracteres">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        💾 Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Exclusão -->
+    <div id="modalExcluir" class="modal">
+        <div class="modal-content modal-small">
+            <h2>⚠️ Confirmar Exclusão</h2>
+            <p>Tem certeza que deseja excluir este tenant?</p>
+            <p><strong id="nomeExcluir"></strong></p>
+            <p class="warning">
+                ⚠️ Esta ação não pode ser desfeita!<br>
+                Todos os dados (categorias, produtos, pedidos, usuários) serão excluídos permanentemente.
+            </p>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="fecharModalExcluir()">
+                    Cancelar
+                </button>
+                <button class="btn btn-danger" onclick="confirmarExclusao()">
+                    🗑️ Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

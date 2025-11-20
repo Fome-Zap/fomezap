@@ -158,10 +158,10 @@ export default function Checkout() {
       };
 
       console.log('📤 Enviando pedido:', pedido);
-      console.log('🔍 URL da API:', `${API_URL}/pedidos?tenant=${tenantId}`);
+      console.log('🔍 URL da API:', `${API_URL}/${tenantId}/pedidos`);
       console.log('📦 Itens detalhados:', JSON.stringify(pedido.itens, null, 2));
 
-      const response = await fetch(`${API_URL}/pedidos?tenant=${tenantId}`, {
+      const response = await fetch(`${API_URL}/${tenantId}/pedidos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pedido)

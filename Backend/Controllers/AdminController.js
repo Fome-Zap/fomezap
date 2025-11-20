@@ -4,6 +4,23 @@ import mongoose from "mongoose";
 
 export default class AdminController {
   
+  // Helper para resolver tenantId (aceita slug ou ObjectId)
+  static async resolverTenantId(tenantParam) {
+    const tenant = await Tenant.findOne({
+      $or: [
+        { tenantId: tenantParam },
+        { slug: tenantParam }
+      ]
+    });
+    
+    if (tenant) {
+      return tenant.tenantId;
+    } else {
+      console.log('❌ Tenant NÃO encontrado com parâmetro:', tenantParam);
+      return tenantParam;
+    }
+  }
+  
   // ============================================
   // CATEGORIAS
   // ============================================
@@ -11,8 +28,8 @@ export default class AdminController {
   // Listar todas as categorias do tenant
   static async listarCategorias(req, res) {
     try {
-      const { tenantId } = req.params;
-      console.log('📁 AdminController.listarCategorias - tenantId:', tenantId);
+      const tenantParam = req.params.tenantId;
+      const tenantId = await AdminController.resolverTenantId(tenantParam);
       
       const categorias = await Categoria.find({ tenantId })
         .sort({ ordem: 1 })
@@ -178,7 +195,8 @@ export default class AdminController {
   // Listar todos os produtos do tenant
   static async listarProdutos(req, res) {
     try {
-      const { tenantId } = req.params;
+      const tenantParam = req.params.tenantId;
+      const tenantId = await AdminController.resolverTenantId(tenantParam);
       const { categoria, busca, disponivel } = req.query;
       
       const filtro = { tenantId };
@@ -395,7 +413,8 @@ export default class AdminController {
   // Listar todos os extras do tenant
   static async listarExtras(req, res) {
     try {
-      const { tenantId } = req.params;
+      const tenantParam = req.params.tenantId;
+      const tenantId = await AdminController.resolverTenantId(tenantParam);
       
       const extras = await Extra.find({ tenantId })
         .sort({ nome: 1 })
@@ -498,7 +517,8 @@ export default class AdminController {
   
   static async getDashboard(req, res) {
     try {
-      const { tenantId } = req.params;
+      const tenantParam = req.params.tenantId;
+      const tenantId = await AdminController.resolverTenantId(tenantParam);
       
       const [
         totalCategorias,
@@ -531,19 +551,28 @@ export default class AdminController {
   
   static async listarPedidos(req, res) {
     try {
-      const { tenantId } = req.params;
+      const tenantParam = req.params.tenantId;
+      console.log('📋 listarPedidos - Parâmetro recebido:', tenantParam);
+      
+      const tenantId = await AdminController.resolverTenantId(tenantParam);
+      console.log('📋 listarPedidos - TenantId resolvido:', tenantId);
+      
       const { status } = req.query;
       
       const filtro = { tenantId };
       if (status) filtro.status = status;
       
+      console.log('📋 listarPedidos - Filtro usado:', JSON.stringify(filtro));
+      
       const pedidos = await Pedido.find(filtro)
         .sort({ createdAt: -1 })
         .limit(100);
       
+      console.log('📋 listarPedidos - Pedidos encontrados:', pedidos.length);
+      
       res.status(200).json({ pedidos });
     } catch (error) {
-      console.error('Erro ao listar pedidos:', error);
+      console.error('❌ Erro ao listar pedidos:', error);
       res.status(500).json({ error: 'Erro ao buscar pedidos' });
     }
   }

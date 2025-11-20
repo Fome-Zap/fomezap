@@ -37,6 +37,15 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   }
+  // Recuperação de senha
+  , resetToken: {
+    type: String,
+    default: null
+  },
+  resetTokenExpires: {
+    type: Date,
+    default: null
+  }
 }, {
   timestamps: true
 });
