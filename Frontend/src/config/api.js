@@ -1,5 +1,5 @@
 // Configurações de API centralizadas
-// Detecta automaticamente ambiente (desenvolvimento/produção)
+// Detecta automaticamente ambiente (desenvolvimento/produção) e tenant por subdomínio
 
 // Detectar produção de forma confiável
 const isProduction = import.meta.env.PROD || 
@@ -25,12 +25,112 @@ export const getImageUrl = (imagePath) => {
   return `${UPLOADS_URL}${imagePath}`;
 };
 
+// ============================================================
+// DETECÇÃO AUTOMÁTICA DE TENANT POR SUBDOMÍNIO
+// ============================================================
+
+/**
+ * Detecta o tipo de acesso com base no hostname
+ * @returns {Object} { accessType: 'manager' | 'tenant' | 'local', tenantSlug: string | null }
+ */
+export const detectAccessType = () => {
+  if (typeof window === 'undefined') {
+    return { accessType: 'local', tenantSlug: null };
+  }
+
+  const hostname = window.location.hostname;
+  
+  // Desenvolvimento local
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    return { accessType: 'local', tenantSlug: null };
+  }
+
+  // Produção Vercel sem domínio customizado
+  if (hostname.includes('vercel.app')) {
+    return { accessType: 'local', tenantSlug: null };
+  }
+
+  // Domínio principal (não customizado)
+  if (hostname === 'fomezap.com' || hostname === 'www.fomezap.com') {
+    return { accessType: 'local', tenantSlug: null };
+  }
+
+  // Manager (Super Admin)
+  if (hostname === 'manager.fomezap.com') {
+    return { accessType: 'manager', tenantSlug: null };
+  }
+
+  // Tenant por subdomínio (ex: bkjau.fomezap.com)
+  if (hostname.endsWith('.fomezap.com')) {
+    const subdomain = hostname.split('.')[0];
+    // Excluir subdomínios reservados
+    if (['www', 'manager', 'api', 'admin', 'lanchoneteemfamilia'].includes(subdomain)) {
+      return { accessType: 'local', tenantSlug: null };
+    }
+    return { accessType: 'tenant', tenantSlug: subdomain };
+  }
+
+  return { accessType: 'local', tenantSlug: null };
+};
+
+/**
+ * Obtém o tenant atual (por subdomínio ou query parameter)
+ * @returns {string | null} Slug do tenant
+ */
+export const getCurrentTenant = () => {
+  // 1. Tentar detectar por subdomínio
+  const { accessType, tenantSlug } = detectAccessType();
+  if (accessType === 'tenant' && tenantSlug) {
+    return tenantSlug;
+  }
+
+  // 2. Fallback para query parameter (desenvolvimento)
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('tenant');
+  }
+
+  return null;
+};
+
+/**
+ * Verifica se está no domínio do Manager (Super Admin)
+ * @returns {boolean}
+ */
+export const isManagerDomain = () => {
+  const { accessType } = detectAccessType();
+  return accessType === 'manager';
+};
+
+/**
+ * Verifica se está em um domínio de tenant
+ * @returns {boolean}
+ */
+export const isTenantDomain = () => {
+  const { accessType } = detectAccessType();
+  return accessType === 'tenant';
+};
+
 // Log de configuração (apenas em desenvolvimento)
 if (import.meta.env.DEV) {
+  const detecao = detectAccessType();
   console.log('🔧 Configuração API:', {
     API_BASE_URL,
     API_URL,
     UPLOADS_URL,
-    ambiente: import.meta.env.MODE
+    ambiente: import.meta.env.MODE,
+    deteccao: detecao,
+    tenantAtual: getCurrentTenant()
+  });
+}
+
+// Log para produção também
+if (isProduction) {
+  const detecao = detectAccessType();
+  console.log('🌐 Ambiente Produção:', {
+    hostname: window.location.hostname,
+    accessType: detecao.accessType,
+    tenantSlug: detecao.tenantSlug,
+    tenantAtual: getCurrentTenant()
   });
 }

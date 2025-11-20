@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { API_URL } from '../config/api';
+import { API_URL, getCurrentTenant } from '../config/api';
 
 export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const tenantId = searchParams.get('tenant') || 'demo';
+  
+  // DETECÇÃO AUTOMÁTICA DE TENANT POR SUBDOMÍNIO
+  const tenantId = getCurrentTenant() || searchParams.get('tenant') || 'demo';
   
   // Receber carrinho via location.state OU do localStorage
   const [carrinho] = useState(() => {
@@ -181,7 +183,7 @@ export default function Checkout() {
       localStorage.removeItem(`carrinho_${tenantId}`);
 
       // Redirecionar para página de sucesso
-      navigate(`/pedido-confirmado?tenant=${tenantId}&numero=${data.pedido.numeroPedido}&whatsapp=${encodeURIComponent(data.whatsappUrl)}`);
+      navigate(`/pedido-confirmado?numero=${data.pedido.numeroPedido}&whatsapp=${encodeURIComponent(data.whatsappUrl)}`);
 
     } catch (error) {
       console.error('❌ Erro ao finalizar pedido:', error);
@@ -200,7 +202,7 @@ export default function Checkout() {
           <h2 className="text-2xl font-bold mb-2">Carrinho Vazio</h2>
           <p className="text-gray-600 mb-6">Adicione produtos para fazer seu pedido</p>
           <button
-            onClick={() => navigate(`/?tenant=${tenantId}`)}
+            onClick={() => navigate('/')}
             className="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors"
           >
             Ver Cardápio
@@ -231,7 +233,7 @@ export default function Checkout() {
       <div className="max-w-6xl mx-auto px-4">
         <div className="mb-6">
           <button
-            onClick={() => navigate(`/?tenant=${tenantId}`)}
+            onClick={() => navigate('/')}
             className="flex items-center text-gray-600 hover:text-gray-900"
           >
             <span className="mr-2">←</span> Voltar ao cardápio

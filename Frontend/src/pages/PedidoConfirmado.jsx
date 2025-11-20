@@ -1,20 +1,22 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getCurrentTenant } from '../config/api';
 
 export default function PedidoConfirmado() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
-  const tenantId = searchParams.get('tenant') || 'demo';
+  // DETECÇÃO AUTOMÁTICA DE TENANT POR SUBDOMÍNIO
+  const tenantId = getCurrentTenant() || searchParams.get('tenant') || 'demo';
   const numeroPedido = searchParams.get('numero');
   const whatsappUrl = searchParams.get('whatsapp');
 
   useEffect(() => {
     // Se não tem número do pedido, redireciona
     if (!numeroPedido) {
-      navigate(`/?tenant=${tenantId}`);
+      navigate('/');
     }
-  }, [numeroPedido, navigate, tenantId]);
+  }, [numeroPedido, navigate]);
 
   const abrirWhatsApp = () => {
     if (whatsappUrl) {
@@ -85,7 +87,7 @@ export default function PedidoConfirmado() {
           )}
 
           <button
-            onClick={() => navigate(`/?tenant=${tenantId}`)}
+            onClick={() => navigate('/')}
             className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition-colors"
           >
             Voltar ao Cardápio

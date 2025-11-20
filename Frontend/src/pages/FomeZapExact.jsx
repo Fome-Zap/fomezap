@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './FomeZapExact.css';
-import { API_URL, API_BASE_URL, getImageUrl } from '../config/api';
+import { API_URL, API_BASE_URL, getImageUrl, getCurrentTenant, isManagerDomain } from '../config/api';
 
 function FomeZapExact() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tenantId = searchParams.get('tenant') || 'demo';
+  
+  // DETECÇÃO AUTOMÁTICA DE TENANT POR SUBDOMÍNIO
+  const tenantId = getCurrentTenant() || searchParams.get('tenant') || 'demo';
   const categoryFilterRef = useRef(null);
   
   const [tenantData, setTenantData] = useState(null);
@@ -66,6 +68,13 @@ function FomeZapExact() {
   }, [carrinho, tenantId]);
 
   useEffect(() => {
+    // Redirecionar manager.fomezap.com para login
+    if (isManagerDomain()) {
+      console.log('🚫 Domínio manager detectado - redirecionando para login');
+      navigate('/login');
+      return;
+    }
+    
     carregarDados();
     
     // Debug: mostrar comando para limpar carrinho bugado
@@ -335,7 +344,7 @@ function FomeZapExact() {
     }
     
     // Navegar para página de checkout passando o carrinho
-    navigate(`/checkout?tenant=${tenantId}`, {
+    navigate('/checkout', {
       state: { carrinho }
     });
   };
