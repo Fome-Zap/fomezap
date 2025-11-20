@@ -1,19 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-<<<<<<< HEAD
-
-// Detectar produção de forma confiável
-const isProduction = import.meta.env.PROD || 
-  (typeof window !== 'undefined' && 
-   (window.location.hostname.includes('vercel.app') || 
-    window.location.hostname.includes('fomezap.com')));
-
-const API_URL = isProduction
-  ? 'https://fomezap-api.onrender.com/api'
-  : 'http://localhost:5000/api';
-=======
 import { API_URL } from '../config/api';
->>>>>>> deploy-vercel
 
 export default function Checkout() {
   const navigate = useNavigate();
