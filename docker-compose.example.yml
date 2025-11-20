@@ -71,6 +71,6 @@ networks:
 # 2. Configure suas credenciais no .env.docker
 # 3. Execute: docker-compose up -d
 # 
-# ATENÇÃO: Nunca commite o arquivo .env.docker ou docker-compose.yml
+# ATENÇÃO: Nunca commitar o arquivo .env.docker ou docker-compose.yml
 # com senhas reais! Use sempre os arquivos .example
 #

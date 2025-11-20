@@ -4,8 +4,6 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-<<<<<<< HEAD
-=======
   ],
   "headers": [
     {
@@ -17,6 +15,5 @@
         }
       ]
     }
->>>>>>> deploy-vercel
   ]
 }
