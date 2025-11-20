@@ -12,6 +12,7 @@ import upload from "./Middlewares/upload.js";
 import { handleMulterError } from "./Middlewares/upload.js";
 import { verificarToken, verificarTenantAdmin } from "./Middlewares/auth.js";
 import detectarTenant from "./Middlewares/detectarTenant.js";
+import { validarDominioManager } from "./Middlewares/validarDominio.js";
 import UploadController from "./Controllers/UploadController.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,8 +45,9 @@ app.use(cors({
             "https://fomezap.netlify.app",
             "https://demo.fomezap.com",
             "https://familia.fomezap.com",
-            "https://lanchonete-em-familia.fomezap.com",
-            "https://thi-burg.fomezap.com"
+            "https://lanchoneteemfamilia.fomezap.com",
+            "https://thi-burg.fomezap.com",
+            "https://manager.fomezap.com"
         ];
         
         // Verificar origins permitidas ou patterns
@@ -67,9 +69,10 @@ app.use(cors({
 // Rotas mais específicas DEVEM vir ANTES das genéricas
 // ============================================================
 
-// === ROTAS DO SUPER ADMIN (SEM DETECÇÃO DE TENANT) ===
+// === ROTAS DO SUPER ADMIN (SEM DETECÇÃO DE TENANT + VALIDAÇÃO DE DOMÍNIO) ===
 // DEVE ser a PRIMEIRA rota /api/* para evitar conflito com outras rotas genéricas
-app.use("/api/super-admin", superAdminRoutes);
+// CRÍTICO: Validar domínio manager.fomezap.com para segurança
+app.use("/api/super-admin", validarDominioManager, superAdminRoutes);
 
 // === ROTAS DE AUTENTICAÇÃO (SEM DETECÇÃO DE TENANT) ===
 app.use("/api/auth", authRoutes);
