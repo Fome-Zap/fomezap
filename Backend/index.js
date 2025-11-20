@@ -7,6 +7,7 @@ import tenantRoutes from "./Routes/tenantRoutes.js";
 import adminRoutes from "./Routes/adminRoutes.js";
 import authRoutes from "./Routes/authRoutes.js";
 import publicRoutes from "./Routes/publicRoutes.js";
+import superAdminRoutes from "./Routes/superAdminRoutes.js";
 import upload from "./Middlewares/upload.js";
 import { handleMulterError } from "./Middlewares/upload.js";
 import { verificarToken, verificarTenantAdmin } from "./Middlewares/auth.js";
@@ -24,9 +25,6 @@ app.use(express.json())
 // Servir arquivos estáticos (uploads e fotos padrão)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/fotos-padrao', express.static(path.join(__dirname, 'public', 'fotos-padrao')));
-
-// === MIDDLEWARE DE DETECÇÃO DE TENANT (APLICAR ANTES DE TUDO) ===
-app.use(detectarTenant);
 
 //cors comunicação entre duas aplicações que rodam em portas diferentes - ADAPTADO PARA MULTI-TENANT
 app.use(cors({
@@ -64,27 +62,33 @@ app.use(cors({
     }
 }))
 
-// === ROTAS PÚBLICAS (SEM AUTENTICAÇÃO) ===
-// Autenticação
+// ============================================================
+// ORDEM CRÍTICA DAS ROTAS - NÃO ALTERAR!
+// Rotas mais específicas DEVEM vir ANTES das genéricas
+// ============================================================
+
+// === ROTAS DO SUPER ADMIN (SEM DETECÇÃO DE TENANT) ===
+// DEVE ser a PRIMEIRA rota /api/* para evitar conflito com outras rotas genéricas
+app.use("/api/super-admin", superAdminRoutes);
+
+// === ROTAS DE AUTENTICAÇÃO (SEM DETECÇÃO DE TENANT) ===
 app.use("/api/auth", authRoutes);
 
-// Cardápio público (para clientes acessarem sem login)
-app.use("/api", publicRoutes);
-
-// Upload de fotos (público para testar, depois proteger)
-app.post("/api/upload/foto", upload.single('foto'), handleMulterError, UploadController.uploadFoto);
-app.get("/api/upload/fotos-padrao", UploadController.listarFotosPadrao);
-
-// === ROTAS DO PAINEL ADMINISTRATIVO (PROTEGIDAS) ===
+// === ROTAS DO PAINEL ADMINISTRATIVO (SEM DETECÇÃO DE TENANT - USA TOKEN) ===
 // Proteger todas as rotas /api/admin/* com autenticação
-// Nota: verificarTenantAdmin aplicado dentro das rotas para ter acesso ao req.params
 app.use("/api/admin", verificarToken, adminRoutes);
 
-// Deletar foto (protegida)
-app.delete("/api/upload/foto/:filename", verificarToken, UploadController.deletarFoto);
+// === MIDDLEWARE DE DETECÇÃO DE TENANT ===
+// A partir daqui, TODAS as rotas passam pela detecção de tenant
+app.use(detectarTenant);
 
-// === ROTAS DE UPLOAD (ANTIGAS - MANTER COMPATIBILIDADE) ===
-// app.use("/api", uploadRoutes);
+// === ROTAS PÚBLICAS DO CARDÁPIO (COM DETECÇÃO DE TENANT) ===
+app.use("/api", publicRoutes);
+
+// === UPLOAD DE FOTOS ===
+app.post("/api/upload/foto", upload.single('foto'), handleMulterError, UploadController.uploadFoto);
+app.get("/api/upload/fotos-padrao", UploadController.listarFotosPadrao);
+app.delete("/api/upload/foto/:filename", verificarToken, UploadController.deletarFoto);
 
 // === ROTAS MULTI-TENANT (FomeZap) - POR ÚLTIMO ===
 app.use("/api", tenantRoutes);

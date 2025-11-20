@@ -5,10 +5,13 @@ const ConfiguracoesController = {
   async buscarConfiguracoes(req, res) {
     try {
       const { tenantId } = req.params;
-      console.log('⚙️  ConfiguracoesController.buscarConfiguracoes - tenantId:', tenantId);
 
-      const tenant = await Tenant.findOne({ tenantId });
-      console.log('🔍 Tenant encontrado:', tenant ? tenant.nome : 'NÃO ENCONTRADO');
+      const tenant = await Tenant.findOne({
+        $or: [
+          { tenantId },
+          { slug: tenantId }
+        ]
+      });
 
       if (!tenant) {
         return res.status(404).json({ erro: 'Restaurante não encontrado' });
@@ -16,6 +19,13 @@ const ConfiguracoesController = {
 
       // Retornar configurações formatadas
       const config = {
+        // Informações do tenant
+        tenant: {
+          tenantId: tenant.tenantId,
+          slug: tenant.slug,
+          nome: tenant.nome
+        },
+        
         // Delivery
         aceitaDelivery: tenant.configuracoes?.aceitaDelivery !== false,
         taxaEntrega: tenant.configuracoes?.taxaEntrega || 5.00,
@@ -63,7 +73,12 @@ const ConfiguracoesController = {
         formasPagamento
       } = req.body;
 
-      let tenant = await Tenant.findOne({ tenantId });
+      let tenant = await Tenant.findOne({
+        $or: [
+          { tenantId },
+          { slug: tenantId }
+        ]
+      });
 
       if (!tenant) {
         // Criar tenant se não existir
@@ -115,7 +130,12 @@ const ConfiguracoesController = {
     try {
       const { tenantId } = req.params;
 
-      const tenant = await Tenant.findOne({ tenantId });
+      const tenant = await Tenant.findOne({
+        $or: [
+          { tenantId },
+          { slug: tenantId }
+        ]
+      });
 
       if (!tenant) {
         return res.status(404).json({ erro: 'Restaurante não encontrado' });

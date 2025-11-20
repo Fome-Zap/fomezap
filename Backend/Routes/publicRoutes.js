@@ -2,6 +2,7 @@
 import { Router } from "express";
 import AdminController from "../Controllers/AdminController.js";
 import ConfiguracoesController from "../Controllers/ConfiguracoesController.js";
+import PedidoController from "../Controllers/PedidoController.js";
 import { Tenant } from "../Models/TenantModels.js";
 
 const router = Router();
@@ -29,8 +30,8 @@ async function validarTenantPublico(req, res, next) {
       $or: [
         { tenantId },
         { slug: tenantId }
-      ],
-      status: { $in: ['ativo', 'trial'] } 
+      ]
+      // Removido filtro de status - nem todos os tenants têm esse campo
     });
     
     if (!tenant) {
@@ -68,5 +69,8 @@ router.get("/:tenantId/cardapio/produtos", validarTenantPublico, AdminController
 router.get("/:tenantId/cardapio/extras", validarTenantPublico, AdminController.listarExtras);
 router.get("/:tenantId/cardapio/configuracoes", validarTenantPublico, ConfiguracoesController.buscarConfiguracoes);
 router.get("/:tenantId/cardapio/horario", validarTenantPublico, ConfiguracoesController.verificarHorarioFuncionamento);
+
+// ROTA PARA CRIAR PEDIDO (público - usado pelo cardápio do cliente)
+router.post("/:tenantId/pedidos", validarTenantPublico, PedidoController.create);
 
 export default router;

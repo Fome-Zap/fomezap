@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../Models/User.js';
+import { sendRecoveryEmail } from '../utils/sendRecoveryEmailGmail.js';
+
 
 // Segredo para assinar o JWT (em produção, use variável de ambiente)
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-aqui-2024';
@@ -235,6 +237,69 @@ class AuthController {
         mensagem: 'Erro ao alterar senha',
         erro: error.message 
       });
+    }
+  }
+
+  // POST /api/auth/recuperar-senha - Solicitar recuperação de senha (envia email com link)
+  async recuperarSenha(req, res) {
+    try {
+      const { email } = req.body;
+      console.log('🔐 Recuperação de senha solicitada para:', email);
+      
+      if (!email) {
+        return res.status(400).json({ mensagem: 'Email é obrigatório' });
+      }
+      
+      const usuario = await User.findOne({ email: email.toLowerCase(), ativo: true });
+      console.log('👤 Usuário encontrado:', usuario ? `Sim (${usuario.nome})` : 'Não');
+      
+      // Sempre retorna sucesso para não revelar se email existe
+      if (!usuario) {
+        console.log('⚠️ Email não encontrado no banco de dados');
+        return res.json({ mensagem: 'Se o email estiver cadastrado, você receberá instruções para recuperar sua senha.' });
+      }
+      
+      // Gerar token único e expiração
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(32).toString('hex');
+      usuario.resetToken = token;
+      usuario.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+      await usuario.save();
+      console.log('✅ Token de recuperação salvo no banco:', token.substring(0, 10) + '...');
+      
+      // Enviar email via Gmail
+      console.log('📧 Tentando enviar email de recuperação...');
+      await sendRecoveryEmail({ to: usuario.email, token, nome: usuario.nome });
+      console.log('✅ Email de recuperação enviado com sucesso!');
+      
+      res.json({ mensagem: 'Se o email estiver cadastrado, você receberá instruções para recuperar sua senha.' });
+    } catch (error) {
+      console.error('❌ Erro ao enviar email de recuperação:', error);
+      console.error('   Stack:', error.stack);
+      res.status(500).json({ mensagem: 'Erro ao processar recuperação de senha', erro: error.message });
+    }
+  }
+
+  // POST /api/auth/resetar-senha/:token - Redefinir senha usando token
+  async resetarSenha(req, res) {
+    try {
+      const { token } = req.params;
+      const { senhaNova } = req.body;
+      if (!senhaNova || senhaNova.length < 6) {
+        return res.status(400).json({ mensagem: 'Nova senha deve ter no mínimo 6 caracteres' });
+      }
+      const usuario = await User.findOne({ resetToken: token, resetTokenExpires: { $gt: new Date() } });
+      if (!usuario) {
+        return res.status(400).json({ mensagem: 'Token inválido ou expirado' });
+      }
+      usuario.senha = senhaNova;
+      usuario.resetToken = null;
+      usuario.resetTokenExpires = null;
+      await usuario.save();
+      res.json({ mensagem: 'Senha redefinida com sucesso! Você já pode fazer login.' });
+    } catch (error) {
+      console.error('Erro ao redefinir senha:', error);
+      res.status(500).json({ mensagem: 'Erro ao redefinir senha', erro: error.message });
     }
   }
 

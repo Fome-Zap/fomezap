@@ -7,7 +7,25 @@ export default class PedidoController {
   // Criar pedido (evolução do create de tarefas)
   static async create(req, res) {
     const { cliente, itens, entrega, pagamento, observacoes } = req.body;
-    const tenantId = req.tenantId || req.params.tenantId; // Vem do middleware OU dos params
+    
+    // Suporta tanto slug quanto tenantId ObjectId
+    const tenantParam = req.tenantId || req.params.tenantId;
+    console.log('📦 PedidoController.create - Parâmetro tenant:', tenantParam);
+    
+    // Resolver slug para tenantId se necessário
+    const tenantQuery = tenantParam.length === 24 && /^[0-9a-fA-F]+$/.test(tenantParam)
+      ? { tenantId: tenantParam }
+      : { $or: [{ tenantId: tenantParam }, { slug: tenantParam }] };
+    
+    const tenant = await Tenant.findOne(tenantQuery);
+    
+    if (!tenant) {
+      console.log('❌ Tenant não encontrado:', tenantParam);
+      return res.status(404).json({ message: "Restaurante não encontrado" });
+    }
+    
+    const tenantId = tenant.tenantId;
+    console.log('✅ Tenant resolvido:', { slug: tenant.slug, tenantId });
 
     // Validações básicas (similar ao seu padrão)
     if (!cliente?.nome) {
@@ -91,15 +109,15 @@ export default class PedidoController {
         });
       }
 
-      // Buscar configurações do tenant
-      const tenant = await Tenant.findOne({ tenantId });
-      const taxaEntrega = entrega.tipo === 'delivery' ? tenant.configuracoes.taxaEntrega : 0;
+      // Buscar configurações do tenant (já temos o objeto tenant)
+      const taxaEntrega = entrega.tipo === 'delivery' ? (tenant.configuracoes?.taxaEntrega || 5.00) : 0;
       const valorTotal = subtotal + taxaEntrega;
 
       // Verificar pedido mínimo
-      if (subtotal < tenant.configuracoes.pedidoMinimo) {
+      const pedidoMinimo = tenant.configuracoes?.pedidoMinimo || 0;
+      if (pedidoMinimo > 0 && subtotal < pedidoMinimo) {
         return res.status(422).json({ 
-          message: `Pedido mínimo: R$ ${tenant.configuracoes.pedidoMinimo.toFixed(2)}` 
+          message: `Pedido mínimo: R$ ${pedidoMinimo.toFixed(2)}` 
         });
       }
 
