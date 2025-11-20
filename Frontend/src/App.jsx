@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import FomeZapExact from "./pages/FomeZapExact";
 import RecuperarSenha from "./pages/RecuperarSenha";
 import ResetarSenha from "./pages/ResetarSenha";
@@ -20,10 +20,13 @@ import ProtectedRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <Routes>
-      {/* Rota principal - Cardápio do cliente */}
-      <Route path="/" element={<FomeZapExact />} />
-      <Route path="/checkout" element={<Checkout />} />
-      <Route path="/pedido-confirmado" element={<PedidoConfirmado />} />
+      {/* Rota raiz redireciona para login */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      
+      {/* Rota principal - Cardápio do cliente (com slug do tenant) */}
+      <Route path="/:tenantSlug" element={<FomeZapExact />} />
+      <Route path="/:tenantSlug/checkout" element={<Checkout />} />
+      <Route path="/:tenantSlug/pedido-confirmado" element={<PedidoConfirmado />} />
 
       {/* Recuperação e redefinição de senha */}
       <Route path="/recuperar-senha" element={<RecuperarSenha />} />

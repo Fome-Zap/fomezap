@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: fomezap-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - fomezap-network
+
+  # Backend (Node.js)
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: fomezap-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./Backend/uploads:/app/uploads
+    networks:
+      - fomezap-network
+
+  # Frontend (React + Vite com Nginx)
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: fomezap-frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - fomezap-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  fomezap-network:
+    driver: bridge
+
+# ===================================
+# INSTRUÇÕES DE USO
+# ===================================
+# 
+# 1. Copie .env.docker.example para .env.docker
+# 2. Configure suas credenciais no .env.docker
+# 3. Execute: docker-compose up -d
+# 
+# ATENÇÃO: Nunca commite o arquivo .env.docker ou docker-compose.yml
+# com senhas reais! Use sempre os arquivos .example
+#
