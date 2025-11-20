@@ -41,6 +41,7 @@ api.interceptors.request.use(
       '/api/super-admin', 
       '/api/auth/me', 
       '/api/auth/alterar-senha', 
+      '/api/auth/alterar-email', // garantir token ao alterar email
       '/api/upload/foto'
     ];
     const ehRotaProtegida = rotasProtegidas.some(rota => config.url?.includes(rota));
@@ -60,11 +61,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token inválido ou expirado
+    // Evitar logout automático para endpoints que retornam 401 por validação de dados
+    // (ex: alterar-email quando a senha informada está incorreta).
+    // Neste caso, queremos propagar o erro para o catch do componente e
+    // não forçar a limpeza do token/localStorage.
+    const requestUrl = error.config?.url || '';
+    const isAlterarEmail = requestUrl.includes('/api/auth/alterar-email');
+
+    if (error.response?.status === 401 && !isAlterarEmail) {
+      // Token inválido ou expirado (não é a rota alterar-email) => forçar logout
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );

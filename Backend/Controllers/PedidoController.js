@@ -351,7 +351,8 @@ export default class PedidoController {
 
   // Função auxiliar para gerar link do WhatsApp
   static gerarLinkWhatsApp(pedido, tenant) {
-    let mensagem = `${tenant.configuracoes.mensagemWhatsApp}\n\n`;
+    let mensagem = `🏪 *${tenant.nome || 'FomeZap'}*\n`;
+    mensagem += `${tenant.configuracoes.mensagemWhatsApp}\n\n`;
     mensagem += `📋 *Pedido #${pedido.numeroPedido}*\n`;
     mensagem += `👤 *Cliente:* ${pedido.cliente.nome}\n`;
     mensagem += `📱 *Telefone:* ${pedido.cliente.telefone}\n\n`;

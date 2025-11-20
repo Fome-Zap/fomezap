@@ -240,6 +240,73 @@ class AuthController {
     }
   }
 
+  // POST /api/auth/alterar-email - Alterar email do usuário logado
+  async alterarEmail(req, res) {
+    try {
+      const { novoEmail, senha } = req.body;
+
+      if (!novoEmail || !senha) {
+        return res.status(400).json({ 
+          mensagem: 'Novo email e senha são obrigatórios' 
+        });
+      }
+
+      // Validar formato do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(novoEmail)) {
+        return res.status(400).json({ 
+          mensagem: 'Email inválido' 
+        });
+      }
+
+      // Buscar usuário
+      const usuario = await User.findById(req.userId);
+
+      if (!usuario) {
+        return res.status(404).json({ 
+          mensagem: 'Usuário não encontrado' 
+        });
+      }
+
+      // Verificar senha
+      const senhaCorreta = await usuario.compararSenha(senha);
+      
+      if (!senhaCorreta) {
+        return res.status(401).json({ 
+          mensagem: 'Senha incorreta' 
+        });
+      }
+
+      // Verificar se novo email já está em uso
+      const emailExistente = await User.findOne({ 
+        email: novoEmail.toLowerCase(),
+        _id: { $ne: usuario._id } // Excluir o próprio usuário
+      });
+
+      if (emailExistente) {
+        return res.status(400).json({ 
+          mensagem: 'Este email já está em uso' 
+        });
+      }
+
+      // Atualizar email
+      usuario.email = novoEmail.toLowerCase();
+      await usuario.save();
+
+      res.json({
+        mensagem: 'Email alterado com sucesso',
+        novoEmail: usuario.email
+      });
+
+    } catch (error) {
+      console.error('Erro ao alterar email:', error);
+      res.status(500).json({ 
+        mensagem: 'Erro ao alterar email',
+        erro: error.message 
+      });
+    }
+  }
+
   // POST /api/auth/recuperar-senha - Solicitar recuperação de senha (envia email com link)
   async recuperarSenha(req, res) {
     try {

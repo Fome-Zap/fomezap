@@ -5,7 +5,18 @@ import api from '../api/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const { login, logout, user } = useAuth();
+
+  // ✅ CORREÇÃO: Verificar e salvar modo manager IMEDIATAMENTE ao carregar
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isModoManager = urlParams.get('mode') === 'manager';
+    
+    if (isModoManager) {
+      localStorage.setItem('managerMode', 'true');
+      console.log('✅ Modo manager detectado e salvo no localStorage');
+    }
+  }, []); // Executa apenas uma vez ao montar
   
   // Redirecionar se já estiver logado
   useEffect(() => {
@@ -53,22 +64,42 @@ export default function Login() {
 
     try {
       const userData = await login(formData.email, formData.senha);
-      setMensagem({ tipo: 'sucesso', texto: 'Login realizado! Redirecionando...' });
+      const role = userData.usuario?.role || userData.role;
       
-      console.log('🔍 Dados do login:', userData);
+      console.log('🔍 Login bem-sucedido:', { email: formData.email, role });
+
+      // CRÍTICO: Se está em modo manager (?mode=manager), BLOQUEAR login de não-super_admin
+      const urlParams = new URLSearchParams(window.location.search);
+      const isModoManager = urlParams.get('mode') === 'manager';
+      
+      if (isModoManager && role !== 'super_admin') {
+        // Fazer logout imediato
+        await logout();
+        setMensagem({ 
+          tipo: 'erro', 
+          texto: 'Acesso negado. Esta área é restrita a administradores do sistema.' 
+        });
+        setCarregando(false);
+        return;
+      }
+
+      // SOLUÇÃO: Salvar flag no localStorage se está em modo manager
+      if (isModoManager && role === 'super_admin') {
+        localStorage.setItem('managerMode', 'true');
+        console.log('✅ Modo manager ativado no localStorage');
+      } else {
+        localStorage.removeItem('managerMode');
+      }
+      
+      setMensagem({ tipo: 'sucesso', texto: 'Login realizado! Redirecionando...' });
       
       // Redirecionar após 1 segundo baseado na role
       setTimeout(() => {
-        // userData = { token, usuario }
-        const role = userData.usuario?.role || userData.role;
-        
-        console.log('🎯 Role detectada:', role);
+        console.log('🎯 Redirecionando para:', role === 'super_admin' ? '/super-admin' : '/admin');
         
         if (role === 'super_admin') {
-          console.log('✅ Redirecionando para /super-admin');
           navigate('/super-admin');
         } else {
-          console.log('✅ Redirecionando para /admin');
           navigate('/admin');
         }
       }, 1000);

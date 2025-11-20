@@ -185,7 +185,11 @@ function AdminLayout() {
           <div className="border-t border-gray-200 mt-auto"></div>
 
           <a
-            href={tenantSlug ? `/?tenant=${tenantSlug}` : `/?tenant=${user?.tenantId || 'demo'}`}
+            href={
+              window.location.hostname.includes('localhost')
+                ? `http://localhost:5173/?tenant=${tenantSlug || user?.tenantId || 'demo'}`
+                : `https://${tenantSlug || user?.tenantId || 'demo'}.fomezap.com`
+            }
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setMenuAberto(false)}

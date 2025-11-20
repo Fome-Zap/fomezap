@@ -70,7 +70,7 @@ function FomeZapExact() {
   useEffect(() => {
     // Redirecionar manager.fomezap.com para login
     if (isManagerDomain()) {
-      console.log('🚫 Domínio manager detectado - redirecionando para login');
+      console.log('🚫 Domínio de gerência detectado - redirecionando para login');
       navigate('/login');
       return;
     }

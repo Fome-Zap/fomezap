@@ -10,8 +10,11 @@ export default function Pedidos() {
   const [atualizando, setAtualizando] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
+  const [tamanhoImpressora, setTamanhoImpressora] = useState('80mm'); // 58mm ou 80mm
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
   const [modalConfirmacao, setModalConfirmacao] = useState({ aberto: false, pedido: null, novoStatus: null });
+  const [modalImpressao, setModalImpressao] = useState({ aberto: false, pedido: null });
+  const [nomeRestaurante, setNomeRestaurante] = useState('');
   const [novosPedidos, setNovosPedidos] = useState(0);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState(null);
   const audioRef = useRef(null);
@@ -23,6 +26,22 @@ export default function Pedidos() {
   
   console.log('👤 Pedidos.jsx - User do AuthContext:', user);
   console.log('🏢 Pedidos.jsx - TenantId extraído:', tenantId);
+
+  // Carregar nome do restaurante
+  useEffect(() => {
+    const carregarNomeRestaurante = async () => {
+      try {
+        const response = await api.get(`/api/admin/${tenantId}/configuracoes`);
+        setNomeRestaurante(response.data.nome || 'Restaurante');
+      } catch (error) {
+        console.error('Erro ao carregar nome do restaurante:', error);
+        setNomeRestaurante('Restaurante');
+      }
+    };
+    if (tenantId) {
+      carregarNomeRestaurante();
+    }
+  }, [tenantId]);
 
   // Carregar pedidos
   useEffect(() => {
@@ -175,6 +194,11 @@ export default function Pedidos() {
   // Imprimir pedido
   const imprimirPedido = (pedido) => {
     setPedidoSelecionado(pedido);
+    setModalImpressao({ aberto: true, pedido });
+  };
+
+  const confirmarImpressao = () => {
+    setModalImpressao({ aberto: false, pedido: null });
     setTimeout(() => {
       window.print();
       setPedidoSelecionado(null);
@@ -549,42 +573,58 @@ export default function Pedidos() {
       {/* Área de Impressão (oculta na tela, visível apenas ao imprimir) */}
       {pedidoSelecionado && (
         <div className="print-only">
-          <div className="comanda-impressao">
-            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
-              🍔 COMANDA DE PEDIDO
+          <div className={`comanda-impressao comanda-${tamanhoImpressora}`}>
+            {/* Nome do Restaurante no topo */}
+            <h2 style={{ textAlign: 'center', marginBottom: '5px', fontSize: tamanhoImpressora === '58mm' ? '14px' : '18px' }}>
+              🏪 {nomeRestaurante.toUpperCase()}
             </h2>
+            <h3 style={{ textAlign: 'center', marginBottom: '15px', fontSize: tamanhoImpressora === '58mm' ? '12px' : '16px' }}>
+              COMANDA DE PEDIDO
+            </h3>
             <hr />
-            <h3>Pedido #{pedidoSelecionado.numeroPedido}</h3>
-            <p><strong>Data/Hora:</strong> {formatarData(pedidoSelecionado.createdAt)}</p>
+            <h3 style={{ fontSize: tamanhoImpressora === '58mm' ? '12px' : '14px' }}>Pedido #{pedidoSelecionado.numeroPedido}</h3>
+            <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
+              <strong>Data/Hora:</strong> {formatarData(pedidoSelecionado.createdAt)}
+            </p>
             <hr />
-            <h4>CLIENTE:</h4>
-            <p><strong>Nome:</strong> {pedidoSelecionado.cliente.nome}</p>
-            <p><strong>Telefone:</strong> {pedidoSelecionado.cliente.telefone}</p>
+            <h4 style={{ fontSize: tamanhoImpressora === '58mm' ? '11px' : '13px' }}>CLIENTE:</h4>
+            <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
+              <strong>Nome:</strong> {pedidoSelecionado.cliente.nome}
+            </p>
+            <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
+              <strong>Telefone:</strong> {pedidoSelecionado.cliente.telefone}
+            </p>
             {pedidoSelecionado.entrega.tipo === 'delivery' && (
               <>
-                <p><strong>Tipo:</strong> 🚚 ENTREGA</p>
-                <p><strong>Endereço:</strong> {pedidoSelecionado.entrega.endereco}</p>
+                <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
+                  <strong>Tipo:</strong> 🚚 ENTREGA
+                </p>
+                <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px', wordWrap: 'break-word' }}>
+                  <strong>Endereço:</strong> {pedidoSelecionado.entrega.endereco}
+                </p>
               </>
             )}
             {pedidoSelecionado.entrega.tipo === 'retirada' && (
-              <p><strong>Tipo:</strong> 🏪 RETIRADA NO LOCAL</p>
+              <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
+                <strong>Tipo:</strong> 🏪 RETIRADA NO LOCAL
+              </p>
             )}
             <hr />
-            <h4>ITENS DO PEDIDO:</h4>
+            <h4 style={{ fontSize: tamanhoImpressora === '58mm' ? '11px' : '13px' }}>ITENS DO PEDIDO:</h4>
             {pedidoSelecionado.itens.map((item, idx) => (
-              <div key={idx} style={{ marginBottom: '15px' }}>
+              <div key={idx} style={{ marginBottom: '15px', fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
                 <p><strong>{item.quantidade}x {item.nome}</strong> - R$ {item.preco.toFixed(2)}</p>
                 {item.extras.length > 0 && (
-                  <p style={{ marginLeft: '20px', fontSize: '0.9em' }}>
+                  <p style={{ marginLeft: '10px', fontSize: tamanhoImpressora === '58mm' ? '9px' : '11px' }}>
                     + Extras: {item.extras.map(e => `${e.nome} (R$ ${e.preco.toFixed(2)})`).join(', ')}
                   </p>
                 )}
                 {item.observacoes && (
-                  <p style={{ marginLeft: '20px', fontSize: '0.9em', fontStyle: 'italic' }}>
+                  <p style={{ marginLeft: '10px', fontSize: tamanhoImpressora === '58mm' ? '9px' : '11px', fontStyle: 'italic' }}>
                     📝 OBS: {item.observacoes}
                   </p>
                 )}
-                <p style={{ marginLeft: '20px' }}>
+                <p style={{ marginLeft: '10px' }}>
                   <strong>Subtotal:</strong> R$ {item.subtotal.toFixed(2)}
                 </p>
               </div>
@@ -592,19 +632,98 @@ export default function Pedidos() {
             <hr />
             {pedidoSelecionado.observacoes && (
               <>
-                <h4>OBSERVAÇÕES GERAIS:</h4>
-                <p>{pedidoSelecionado.observacoes}</p>
+                <h4 style={{ fontSize: tamanhoImpressora === '58mm' ? '11px' : '13px' }}>OBSERVAÇÕES GERAIS:</h4>
+                <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>{pedidoSelecionado.observacoes}</p>
                 <hr />
               </>
             )}
-            <h4>PAGAMENTO:</h4>
-            <p><strong>Forma:</strong> {pedidoSelecionado.pagamento.forma}</p>
+            <h4 style={{ fontSize: tamanhoImpressora === '58mm' ? '11px' : '13px' }}>PAGAMENTO:</h4>
+            <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
+              <strong>Forma:</strong> {pedidoSelecionado.pagamento.forma}
+            </p>
             {pedidoSelecionado.entrega.taxa > 0 && (
-              <p><strong>Taxa de Entrega:</strong> R$ {pedidoSelecionado.entrega.taxa.toFixed(2)}</p>
+              <p style={{ fontSize: tamanhoImpressora === '58mm' ? '10px' : '12px' }}>
+                <strong>Taxa de Entrega:</strong> R$ {pedidoSelecionado.entrega.taxa.toFixed(2)}
+              </p>
             )}
-            <h3 style={{ textAlign: 'right', marginTop: '20px' }}>
+            <h3 style={{ textAlign: 'right', marginTop: '20px', fontSize: tamanhoImpressora === '58mm' ? '12px' : '16px' }}>
               TOTAL: R$ {pedidoSelecionado.valorTotal.toFixed(2)}
             </h3>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Seleção de Tamanho de Impressora */}
+      {modalImpressao.aberto && (
+        <div className="modal-overlay" onClick={() => setModalImpressao({ aberto: false, pedido: null })}>
+          <div className="modal-confirmacao" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🖨️ Selecionar Tamanho da Impressora</h3>
+              <button className="modal-close" onClick={() => setModalImpressao({ aberto: false, pedido: null })}>✕</button>
+            </div>
+            
+            <div className="modal-body">
+              <p className="modal-pedido-info">
+                Pedido <strong>#{modalImpressao.pedido?.numeroPedido}</strong>
+              </p>
+              
+              <div style={{ marginTop: '20px' }}>
+                <p style={{ marginBottom: '15px', color: '#666' }}>
+                  Selecione o tamanho da impressora térmica:
+                </p>
+                
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => setTamanhoImpressora('58mm')}
+                    className={`btn-tamanho-impressora ${tamanhoImpressora === '58mm' ? 'active' : ''}`}
+                    style={{
+                      padding: '15px 30px',
+                      border: tamanhoImpressora === '58mm' ? '3px solid #10b981' : '2px solid #ddd',
+                      borderRadius: '8px',
+                      background: tamanhoImpressora === '58mm' ? '#ecfdf5' : '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ fontSize: '24px', marginBottom: '5px' }}>📄</div>
+                    <div style={{ fontWeight: 'bold' }}>58mm</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>Menor</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setTamanhoImpressora('80mm')}
+                    className={`btn-tamanho-impressora ${tamanhoImpressora === '80mm' ? 'active' : ''}`}
+                    style={{
+                      padding: '15px 30px',
+                      border: tamanhoImpressora === '80mm' ? '3px solid #10b981' : '2px solid #ddd',
+                      borderRadius: '8px',
+                      background: tamanhoImpressora === '80mm' ? '#ecfdf5' : '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ fontSize: '24px', marginBottom: '5px' }}>📃</div>
+                    <div style={{ fontWeight: 'bold' }}>80mm</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>Padrão</div>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="btn-cancelar" 
+                onClick={() => setModalImpressao({ aberto: false, pedido: null })}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-confirmar"
+                onClick={confirmarImpressao}
+              >
+                🖨️ Imprimir
+              </button>
+            </div>
           </div>
         </div>
       )}

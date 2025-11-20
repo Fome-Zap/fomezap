@@ -11,6 +11,12 @@ export default function Configuracoes() {
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
   const [tenantInfo, setTenantInfo] = useState({ email: '', slug: '' });
   
+  // Estado para modal de alteração de email
+  const [showModalEmail, setShowModalEmail] = useState(false);
+  const [novoEmail, setNovoEmail] = useState('');
+  const [senhaConfirmacao, setSenhaConfirmacao] = useState('');
+  const [loadingEmail, setLoadingEmail] = useState(false);
+  
   // Estados para alteração de senha
   const [senhaForm, setSenhaForm] = useState({
     senhaAtual: '',
@@ -170,6 +176,60 @@ export default function Configuracoes() {
     }
   };
 
+  const alterarEmail = async (e) => {
+    e.preventDefault();
+    
+    // Validações
+    if (!novoEmail || !senhaConfirmacao) {
+      setMensagem({ tipo: 'erro', texto: 'Preencha todos os campos' });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 3000);
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(novoEmail)) {
+      setMensagem({ tipo: 'erro', texto: 'Email inválido' });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 3000);
+      return;
+    }
+
+    if (novoEmail === tenantInfo.email) {
+      setMensagem({ tipo: 'erro', texto: 'O novo email é igual ao atual' });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 3000);
+      return;
+    }
+
+    try {
+      setLoadingEmail(true);
+      await api.post('/api/auth/alterar-email', {
+        novoEmail,
+        senha: senhaConfirmacao
+      });
+      
+      setMensagem({ tipo: 'sucesso', texto: 'Email alterado com sucesso! Você será desconectado.' });
+      
+      // Atualizar email local
+      setTenantInfo({ ...tenantInfo, email: novoEmail });
+      
+      // Fechar modal
+      setShowModalEmail(false);
+      setNovoEmail('');
+      setSenhaConfirmacao('');
+      
+      // Logout após 3 segundos
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 3000);
+    } catch (error) {
+      const mensagemErro = error.response?.data?.mensagem || 'Erro ao alterar email';
+      setMensagem({ tipo: 'erro', texto: mensagemErro });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
+    } finally {
+      setLoadingEmail(false);
+    }
+  };
+
   const diasSemana = [
     { id: 'segunda', label: 'Segunda' },
     { id: 'terca', label: 'Terça' },
@@ -221,104 +281,15 @@ export default function Configuracoes() {
       </div>
 
       <div className="space-y-6">
-        {/* Informações da Conta */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-md p-6 border border-blue-100">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
-            👤 Informações da Conta
-          </h2>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                📧 Email de Login
-              </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-gray-800 font-mono text-sm">
-                  {tenantInfo.email || user?.email || 'Não disponível'}
-                </code>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(tenantInfo.email || user?.email || '');
-                    setMensagem({ tipo: 'sucesso', texto: 'Email copiado!' });
-                    setTimeout(() => setMensagem({ tipo: '', texto: '' }), 2000);
-                  }}
-                  className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                  title="Copiar email"
-                >
-                  📋
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                🔗 Slug do Restaurante
-              </label>
-              <code className="block px-3 py-2 bg-gray-50 border border-gray-200 rounded text-gray-800 font-mono text-sm">
-                {tenantInfo.slug || tenantId}
-              </code>
-            </div>
-
-            <div className="md:col-span-2 bg-white rounded-lg p-4 shadow-sm">
-              <label className="block text-sm font-medium text-gray-600 mb-2">
-                🌐 URLs do Cardápio
-              </label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-24">Local:</span>
-                  <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-blue-600 font-mono text-sm">
-                    http://localhost:5173/?tenant={tenantInfo.slug || tenantId}
-                  </code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`http://localhost:5173/?tenant=${tenantInfo.slug || tenantId}`);
-                      setMensagem({ tipo: 'sucesso', texto: 'URL copiada!' });
-                      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 2000);
-                    }}
-                    className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                    title="Copiar URL"
-                  >
-                    📋
-                  </button>
-                  <a
-                    href={`http://localhost:5173/?tenant=${tenantInfo.slug || tenantId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                    title="Abrir cardápio"
-                  >
-                    🔗
-                  </a>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-24">Produção:</span>
-                  <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-purple-600 font-mono text-sm">
-                    https://{tenantInfo.slug || tenantId}.fomezap.com
-                  </code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://${tenantInfo.slug || tenantId}.fomezap.com`);
-                      setMensagem({ tipo: 'sucesso', texto: 'URL copiada!' });
-                      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 2000);
-                    }}
-                    className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                    title="Copiar URL"
-                  >
-                    📋
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Dados do Restaurante */}
+        {/* Dados do Restaurante - COM EMAIL INTEGRADO */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             🏪 Dados do Restaurante
           </h2>
           
           <div className="grid md:grid-cols-2 gap-4">
+            {/* (Email moved down) */}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nome do Restaurante
@@ -354,6 +325,26 @@ export default function Configuracoes() {
                 onChange={(e) => setConfig({ ...config, endereco: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
+            </div>
+            {/* Email de Login simples - colocado ao final do card, sem fundo azul */}
+            <div className="md:col-span-2 flex flex-col gap-2">
+              <label className="block text-sm font-medium text-gray-700">
+                📧 Email de Login
+              </label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-4 py-2 bg-gray-50 rounded text-gray-500 font-mono text-sm border border-gray-300">
+                  {tenantInfo.email || user?.email || 'Não disponível'}
+                </code>
+                <button
+                  onClick={() => setShowModalEmail(true)}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  ✏️ Alterar Email
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Use este email para fazer login no sistema
+              </p>
             </div>
           </div>
         </div>
@@ -611,6 +602,94 @@ export default function Configuracoes() {
           </button>
         </div>
       </div>
+
+      {/* Modal de Alteração de Email */}
+      {showModalEmail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-4">📧</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Alterar Email</h2>
+              <p className="text-gray-600 text-sm">
+                ⚠️ Você será desconectado após a alteração
+              </p>
+            </div>
+
+            <form onSubmit={alterarEmail} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Atual
+                </label>
+                <input
+                  type="email"
+                  value={tenantInfo.email || user?.email}
+                  disabled
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Novo Email
+                </label>
+                <input
+                  type="email"
+                  value={novoEmail}
+                  onChange={(e) => setNovoEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="novo@email.com"
+                  disabled={loadingEmail}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirme sua Senha
+                </label>
+                <input
+                  type="password"
+                  value={senhaConfirmacao}
+                  onChange={(e) => setSenhaConfirmacao(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="••••••••"
+                  disabled={loadingEmail}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Digite sua senha atual para confirmar a alteração
+                </p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModalEmail(false);
+                    setNovoEmail('');
+                    setSenhaConfirmacao('');
+                  }}
+                  disabled={loadingEmail}
+                  className="flex-1 py-3 rounded-lg font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 transition disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingEmail}
+                  className={`flex-1 py-3 rounded-lg font-semibold text-white transition ${
+                    loadingEmail
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                  }`}
+                >
+                  {loadingEmail ? 'Alterando...' : 'Confirmar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

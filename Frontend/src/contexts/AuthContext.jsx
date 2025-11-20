@@ -84,6 +84,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('managerMode'); // Limpar flag de manager mode
     setToken(null);
     setUser(null);
   };

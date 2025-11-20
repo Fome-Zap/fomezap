@@ -29,17 +29,13 @@ export const validarDominioManager = (req, res, next) => {
                       origin.includes('manager.fomezap.com');
     
     if (!ehManager) {
-      console.warn('🚫 ACESSO NEGADO: Tentativa de acessar super-admin fora do domínio manager');
+      console.warn('🚫 Acesso negado à área restrita');
       console.warn('   Host:', host);
-      console.warn('   Origin:', origin);
       console.warn('   Rota:', req.path);
       
       return res.status(403).json({ 
-        mensagem: 'Acesso negado. Esta rota só pode ser acessada através de manager.fomezap.com',
-        detalhes: {
-          dominioAtual: host,
-          dominioRequerido: 'manager.fomezap.com'
-        }
+        mensagem: 'Acesso negado.',
+        detalhes: 'Você não tem permissão para acessar esta área.'
       });
     }
 
@@ -69,7 +65,7 @@ export const validarNaoEhManager = (req, res, next) => {
     if (host === 'manager.fomezap.com') {
       console.warn('🚫 Manager tentando acessar rota de tenant');
       return res.status(403).json({ 
-        mensagem: 'Esta rota não está disponível no domínio manager.fomezap.com',
+        mensagem: 'Esta rota não está disponível no gerenciador mestre',
         detalhes: 'Acesse através do domínio do tenant'
       });
     }

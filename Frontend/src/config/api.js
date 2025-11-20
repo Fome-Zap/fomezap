@@ -95,10 +95,33 @@ export const getCurrentTenant = () => {
 
 /**
  * Verifica se está no domínio do Manager (Super Admin)
+ * Em desenvolvimento (localhost), permite acesso se:
+ * 1. Houver parâmetro ?mode=manager na URL OU
+ * 2. Flag 'managerMode' estiver no localStorage (persiste após redirecionamento)
  * @returns {boolean}
  */
 export const isManagerDomain = () => {
   const { accessType } = detectAccessType();
+  
+  // Em desenvolvimento (localhost)
+  if (typeof window !== 'undefined' && window.location.hostname.includes('localhost')) {
+    // Verificar query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const temQueryParam = urlParams.get('mode') === 'manager';
+    
+    // Verificar localStorage (persiste após login)
+    const temFlagLocalStorage = localStorage.getItem('managerMode') === 'true';
+    
+    console.log('🔍 isManagerDomain (localhost):', {
+      temQueryParam,
+      temFlagLocalStorage,
+      resultado: temQueryParam || temFlagLocalStorage
+    });
+    
+    return temQueryParam || temFlagLocalStorage;
+  }
+  
+  // Em produção, apenas domínio manager.fomezap.com
   return accessType === 'manager';
 };
 

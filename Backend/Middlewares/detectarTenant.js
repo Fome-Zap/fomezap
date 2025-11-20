@@ -12,14 +12,18 @@ export async function detectarTenant(req, res, next) {
       '/api/super-admin',
       '/api/auth',
       '/health',
-      '/detect-tenant'
+      '/detect-tenant',
+      '/' // Rota raiz do Render para health check
     ];
 
     // Verificar se a rota atual começa com alguma das rotas excluídas
-    const deveExcluir = rotasExcluidas.some(rota => req.path.startsWith(rota));
+    const deveExcluir = rotasExcluidas.some(rota => req.path.startsWith(rota)) || req.path === '/';
     
     if (deveExcluir) {
-      console.log(`⏩ Pulando detecção de tenant para: ${req.path}`);
+      // Não logar para health checks do Render (HEAD / e GET /)
+      if (req.path !== '/' || req.query.tenant) {
+        console.log(`⏩ Pulando detecção de tenant para: ${req.path}`);
+      }
       return next();
     }
 
@@ -90,11 +94,13 @@ export async function detectarTenant(req, res, next) {
       console.warn(`⚠️  Tenant não encontrado: ${tenantId}`);
       req.tenantId = tenantId;
     } else {
-      // Nenhum tenant detectado
-      console.log(`⚠️  Nenhum tenant detectado para: ${req.method} ${req.path}`);
-      console.log(`   Host: ${req.get('host')}`);
-      console.log(`   Query: ${JSON.stringify(req.query)}`);
-      console.log(`   Headers x-tenant-id: ${req.headers['x-tenant-id']}`);
+      // Nenhum tenant detectado - apenas logar se não for health check
+      if (req.path !== '/' && !req.path.includes('health')) {
+        console.log(`⚠️  Nenhum tenant detectado para: ${req.method} ${req.path}`);
+        console.log(`   Host: ${req.get('host')}`);
+        console.log(`   Query: ${JSON.stringify(req.query)}`);
+        console.log(`   Headers x-tenant-id: ${req.headers['x-tenant-id']}`);
+      }
     }
 
     next();

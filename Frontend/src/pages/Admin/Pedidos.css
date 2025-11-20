@@ -468,7 +468,18 @@
   .comanda-impressao {
     padding: 20px;
     font-family: 'Courier New', monospace;
-    max-width: 80mm; /* Tamanho de impressora térmica */
+  }
+
+  /* Impressora 58mm (58.5mm de largura real) */
+  .comanda-58mm {
+    max-width: 58mm;
+    font-size: 10px;
+  }
+
+  /* Impressora 80mm (79.5mm de largura real) */
+  .comanda-80mm {
+    max-width: 80mm;
+    font-size: 12px;
   }
   
   .comanda-impressao h2,
@@ -479,6 +490,7 @@
   
   .comanda-impressao p {
     margin: 5px 0;
+    word-wrap: break-word;
   }
   
   .comanda-impressao hr {
