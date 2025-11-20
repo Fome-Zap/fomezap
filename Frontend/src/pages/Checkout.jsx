@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+<<<<<<< HEAD
 
 // Detectar produção de forma confiável
 const isProduction = import.meta.env.PROD || 
@@ -10,6 +11,9 @@ const isProduction = import.meta.env.PROD ||
 const API_URL = isProduction
   ? 'https://fomezap-api.onrender.com/api'
   : 'http://localhost:5000/api';
+=======
+import { API_URL } from '../config/api';
+>>>>>>> deploy-vercel
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -167,10 +171,10 @@ export default function Checkout() {
       };
 
       console.log('📤 Enviando pedido:', pedido);
-      console.log('🔍 URL da API:', `${API_URL}/pedidos?tenant=${tenantId}`);
+      console.log('🔍 URL da API:', `${API_URL}/${tenantId}/pedidos`);
       console.log('📦 Itens detalhados:', JSON.stringify(pedido.itens, null, 2));
 
-      const response = await fetch(`${API_URL}/pedidos?tenant=${tenantId}`, {
+      const response = await fetch(`${API_URL}/${tenantId}/pedidos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pedido)

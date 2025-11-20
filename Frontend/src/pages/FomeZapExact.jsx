@@ -19,8 +19,13 @@ function FomeZapExact() {
   const [categoriaAtiva, setCategoriaAtiva] = useState('all');
   const [carrinho, setCarrinho] = useState(() => {
     // Recuperar carrinho do localStorage ao inicializar
-    const carrinhoSalvo = localStorage.getItem(`carrinho_${tenantId}`);
-    return carrinhoSalvo ? JSON.parse(carrinhoSalvo) : [];
+    try {
+      const carrinhoSalvo = localStorage.getItem(`carrinho_${tenantId}`);
+      return carrinhoSalvo ? JSON.parse(carrinhoSalvo) : [];
+    } catch (error) {
+      console.error('Erro ao carregar carrinho do localStorage:', error);
+      return [];
+    }
   });
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -52,7 +57,12 @@ function FomeZapExact() {
 
   // Salvar carrinho no localStorage sempre que mudar
   useEffect(() => {
-    localStorage.setItem(`carrinho_${tenantId}`, JSON.stringify(carrinho));
+    try {
+      localStorage.setItem(`carrinho_${tenantId}`, JSON.stringify(carrinho));
+    } catch (error) {
+      console.error('Erro ao salvar carrinho no localStorage:', error);
+      mostrarToast('Não foi possível salvar o carrinho. Verifique as configurações do navegador.', 'error');
+    }
   }, [carrinho, tenantId]);
 
   useEffect(() => {

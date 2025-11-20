@@ -23,7 +23,10 @@ export const AuthProvider = ({ children }) => {
   const buscarUsuario = async () => {
     try {
       const response = await api.get('/api/auth/me');
-      setUser(response.data.usuario);
+      const userData = response.data.usuario;
+      setUser(userData);
+      // Salvar no localStorage também como backup
+      localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Erro ao buscar usuário:', error);
       // Se token inválido, fazer logout
@@ -45,8 +48,9 @@ export const AuthProvider = ({ children }) => {
 
       const { token: novoToken, usuario } = response.data;
 
-      // Salvar token no localStorage
+      // Salvar token e user no localStorage
       localStorage.setItem('token', novoToken);
+      localStorage.setItem('user', JSON.stringify(usuario));
       setToken(novoToken);
       setUser(usuario);
 
@@ -79,6 +83,7 @@ export const AuthProvider = ({ children }) => {
   // Logout
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
   };

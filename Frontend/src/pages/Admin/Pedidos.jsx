@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { RefreshCw, Bell, BellRing } from 'lucide-react';
 import './Pedidos.css';
 import api from '../../api/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState([]);
@@ -15,15 +16,28 @@ export default function Pedidos() {
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState(null);
   const audioRef = useRef(null);
   const pedidosAnterioresRef = useRef([]);
-  const tenantSlug = 'demo'; // TODO: Pegar dinamicamente do contexto
+  
+  // Pegar user do AuthContext (fonte confiável)
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
+  
+  console.log('👤 Pedidos.jsx - User do AuthContext:', user);
+  console.log('🏢 Pedidos.jsx - TenantId extraído:', tenantId);
 
   // Carregar pedidos
   useEffect(() => {
+    if (!tenantId) {
+      console.log('⏳ Aguardando tenantId...');
+      return;
+    }
+    
+    console.log('✅ TenantId disponível, carregando pedidos...');
     carregarPedidos(true); // Primeira carga
+    
     // Polling automático a cada 15 segundos
     const interval = setInterval(() => carregarPedidos(false), 15000);
     return () => clearInterval(interval);
-  }, []); // Remove filtroStatus para não recarregar ao trocar filtro
+  }, [tenantId]); // Adiciona tenantId como dependência
 
   useEffect(() => {
     if (mensagem.texto) {
@@ -62,10 +76,21 @@ export default function Pedidos() {
       if (isManual) setAtualizando(true);
       
       // SEMPRE buscar todos os pedidos para ter contadores corretos
-      const url = `/api/admin/${tenantSlug}/pedidos`;
+      const url = `/api/admin/${tenantId}/pedidos`;
+      
+      console.log('🔍 Pedidos.jsx - Carregando pedidos...');
+      console.log('📍 URL:', url);
+      console.log('🔑 TenantId:', tenantId);
+      console.log('👤 User:', user);
       
       const response = await api.get(url);
+      
+      console.log('✅ Resposta recebida:', response.status);
+      console.log('📦 Dados:', response.data);
+      
       const pedidosCarregados = response.data.pedidos || [];
+      
+      console.log('📋 Total de pedidos:', pedidosCarregados.length);
       
       // Detectar novos pedidos
       if (pedidosAnterioresRef.current.length > 0 && !isManual) {
@@ -110,7 +135,7 @@ export default function Pedidos() {
       console.error('Erro ao carregar pedidos:', error);
       setLoading(false);
       if (isManual) {
-        mostrarMensagem('Erro ao carregar pedidos', 'erro');
+        mostrarMensagem('❌ Não foi possível conectar ao servidor. Tente novamente.', 'erro');
       }
     } finally {
       if (isManual) setAtualizando(false);
@@ -137,7 +162,7 @@ export default function Pedidos() {
     const { pedido, novoStatus } = modalConfirmacao;
     
     try {
-      await api.patch(`/api/admin/${tenantSlug}/pedidos/${pedido._id}`, { status: novoStatus });
+      await api.patch(`/api/admin/${tenantId}/pedidos/${pedido._id}`, { status: novoStatus });
       carregarPedidos(false);
       mostrarMensagem('Status alterado com sucesso!', 'sucesso');
       fecharModalConfirmacao();

@@ -7,10 +7,7 @@ const tenantSchema = new Schema({
   tenantId: {
     type: String,
     required: true,
-    lowercase: true,
-    match: /^[a-z0-9-]+$/,
-    minlength: 3,
-    maxlength: 30
+    unique: true
   },
   nome: {
     type: String,
@@ -18,13 +15,15 @@ const tenantSchema = new Schema({
   },
   slug: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
   logo: {
     type: String,
     default: "images/logo-default.png"
   },
   telefone: String,
+  email: String, // Email de contato do negócio
   endereco: String,
   
   // Configurações de funcionamento
@@ -228,9 +227,7 @@ const pedidoSchema = new Schema({
   timestamps: true 
 });
 
-// Indexes para performance
-tenantSchema.index({ tenantId: 1 }, { unique: true });
-tenantSchema.index({ slug: 1 }, { unique: true });
+// Indexes para performance (remover duplicados)
 categoriaSchema.index({ tenantId: 1, ordem: 1 });
 produtoSchema.index({ tenantId: 1, categoria: 1 });
 produtoSchema.index({ tenantId: 1, disponivel: 1 });

@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useCurrencyInput } from '../../hooks/useCurrencyInput';
 import api from '../../api/api';
 
-const TENANT_ID = 'demo';
-
 export default function Configuracoes() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
+  
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
+  const [tenantInfo, setTenantInfo] = useState({ email: '', slug: '' });
+  
+  // Estados para alteração de senha
+  const [senhaForm, setSenhaForm] = useState({
+    senhaAtual: '',
+    senhaNova: '',
+    confirmarSenha: ''
+  });
+  const [loadingSenha, setLoadingSenha] = useState(false);
   
   // Máscaras de moeda
   const taxaEntrega = useCurrencyInput('5.00');
@@ -39,7 +50,7 @@ export default function Configuracoes() {
   const carregarConfiguracoes = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/admin/${TENANT_ID}/configuracoes`);
+      const response = await api.get(`/api/admin/${tenantId}/configuracoes`);
       
       if (response.data) {
         setConfig(response.data);
@@ -47,8 +58,21 @@ export default function Configuracoes() {
         taxaEntrega.setValue(response.data.taxaEntrega || 5.00);
         pedidoMinimo.setValue(response.data.pedidoMinimo || 25.00);
       }
+
+      // Buscar informações do tenant (email e slug)
+      const configResponse = await api.get(`/api/admin/${tenantId}/configuracoes`);
+      if (configResponse.data?.tenant) {
+        setTenantInfo({
+          email: user?.email || '',
+          slug: configResponse.data.tenant.slug || tenantId
+        });
+      }
     } catch (error) {
       console.log('Usando configurações padrão');
+      setTenantInfo({
+        email: user?.email || '',
+        slug: tenantId
+      });
     } finally {
       setLoading(false);
     }
@@ -65,7 +89,7 @@ export default function Configuracoes() {
         pedidoMinimo: pedidoMinimo.realValue
       };
 
-      const response = await api.put(`/api/admin/${TENANT_ID}/configuracoes`, payload);
+      const response = await api.put(`/api/admin/${tenantId}/configuracoes`, payload);
       setMensagem({ tipo: 'sucesso', texto: 'Configurações salvas com sucesso!' });
       // Auto-esconder após 5 segundos
       setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
@@ -102,6 +126,47 @@ export default function Configuracoes() {
         ...config,
         formasPagamento: [...config.formasPagamento, forma]
       });
+    }
+  };
+
+  const alterarSenha = async (e) => {
+    e.preventDefault();
+    
+    // Validações
+    if (!senhaForm.senhaAtual || !senhaForm.senhaNova || !senhaForm.confirmarSenha) {
+      setMensagem({ tipo: 'erro', texto: 'Preencha todos os campos de senha' });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
+      return;
+    }
+
+    if (senhaForm.senhaNova.length < 6) {
+      setMensagem({ tipo: 'erro', texto: 'Nova senha deve ter no mínimo 6 caracteres' });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
+      return;
+    }
+
+    if (senhaForm.senhaNova !== senhaForm.confirmarSenha) {
+      setMensagem({ tipo: 'erro', texto: 'As senhas não coincidem' });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
+      return;
+    }
+
+    try {
+      setLoadingSenha(true);
+      await api.post('/api/auth/alterar-senha', {
+        senhaAtual: senhaForm.senhaAtual,
+        senhaNova: senhaForm.senhaNova
+      });
+      
+      setMensagem({ tipo: 'sucesso', texto: 'Senha alterada com sucesso!' });
+      setSenhaForm({ senhaAtual: '', senhaNova: '', confirmarSenha: '' });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
+    } catch (error) {
+      const mensagemErro = error.response?.data?.mensagem || 'Erro ao alterar senha';
+      setMensagem({ tipo: 'erro', texto: mensagemErro });
+      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 5000);
+    } finally {
+      setLoadingSenha(false);
     }
   };
 
@@ -156,6 +221,97 @@ export default function Configuracoes() {
       </div>
 
       <div className="space-y-6">
+        {/* Informações da Conta */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-md p-6 border border-blue-100">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
+            👤 Informações da Conta
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
+                📧 Email de Login
+              </label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-gray-800 font-mono text-sm">
+                  {tenantInfo.email || user?.email || 'Não disponível'}
+                </code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(tenantInfo.email || user?.email || '');
+                    setMensagem({ tipo: 'sucesso', texto: 'Email copiado!' });
+                    setTimeout(() => setMensagem({ tipo: '', texto: '' }), 2000);
+                  }}
+                  className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                  title="Copiar email"
+                >
+                  📋
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
+                🔗 Slug do Restaurante
+              </label>
+              <code className="block px-3 py-2 bg-gray-50 border border-gray-200 rounded text-gray-800 font-mono text-sm">
+                {tenantInfo.slug || tenantId}
+              </code>
+            </div>
+
+            <div className="md:col-span-2 bg-white rounded-lg p-4 shadow-sm">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
+                🌐 URLs do Cardápio
+              </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-24">Local:</span>
+                  <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-blue-600 font-mono text-sm">
+                    http://localhost:5173/?tenant={tenantInfo.slug || tenantId}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`http://localhost:5173/?tenant=${tenantInfo.slug || tenantId}`);
+                      setMensagem({ tipo: 'sucesso', texto: 'URL copiada!' });
+                      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 2000);
+                    }}
+                    className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                    title="Copiar URL"
+                  >
+                    📋
+                  </button>
+                  <a
+                    href={`http://localhost:5173/?tenant=${tenantInfo.slug || tenantId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                    title="Abrir cardápio"
+                  >
+                    🔗
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-24">Produção:</span>
+                  <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded text-purple-600 font-mono text-sm">
+                    https://{tenantInfo.slug || tenantId}.fomezap.com
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://${tenantInfo.slug || tenantId}.fomezap.com`);
+                      setMensagem({ tipo: 'sucesso', texto: 'URL copiada!' });
+                      setTimeout(() => setMensagem({ tipo: '', texto: '' }), 2000);
+                    }}
+                    className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                    title="Copiar URL"
+                  >
+                    📋
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Dados do Restaurante */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -378,7 +534,73 @@ export default function Configuracoes() {
           </div>
         </div>
 
-        {/* Botão Salvar */}
+        {/* Segurança - Alterar Senha */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            🔒 Segurança
+          </h2>
+
+          <form onSubmit={alterarSenha} className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Senha Atual
+                </label>
+                <input
+                  type="password"
+                  value={senhaForm.senhaAtual}
+                  onChange={(e) => setSenhaForm({ ...senhaForm, senhaAtual: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nova Senha
+                </label>
+                <input
+                  type="password"
+                  value={senhaForm.senhaNova}
+                  onChange={(e) => setSenhaForm({ ...senhaForm, senhaNova: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="••••••••"
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirmar Nova Senha
+                </label>
+                <input
+                  type="password"
+                  value={senhaForm.confirmarSenha}
+                  onChange={(e) => setSenhaForm({ ...senhaForm, confirmarSenha: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="••••••••"
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-start">
+              <button
+                type="submit"
+                disabled={loadingSenha}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingSenha ? 'Alterando...' : '🔑 Alterar Senha'}
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              💡 A senha deve ter no mínimo 6 caracteres. Após alterar, você precisará fazer login novamente.
+            </p>
+          </form>
+        </div>
+
+        {/* Botão Salvar Configurações */}
         <div className="flex justify-end gap-4">
           <button
             onClick={salvarConfiguracoes}
@@ -392,3 +614,5 @@ export default function Configuracoes() {
     </div>
   );
 }
+
+

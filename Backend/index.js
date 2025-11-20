@@ -2,13 +2,16 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import mongoose from "./db/conn.js";
 import tenantRoutes from "./Routes/tenantRoutes.js";
 import adminRoutes from "./Routes/adminRoutes.js";
 import authRoutes from "./Routes/authRoutes.js";
 import publicRoutes from "./Routes/publicRoutes.js";
+import superAdminRoutes from "./Routes/superAdminRoutes.js";
 import upload from "./Middlewares/upload.js";
 import { handleMulterError } from "./Middlewares/upload.js";
 import { verificarToken, verificarTenantAdmin } from "./Middlewares/auth.js";
+import detectarTenant from "./Middlewares/detectarTenant.js";
 import UploadController from "./Controllers/UploadController.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,41 +29,66 @@ app.use('/fotos-padrao', express.static(path.join(__dirname, 'public', 'fotos-pa
 //cors comunicação entre duas aplicações que rodam em portas diferentes - ADAPTADO PARA MULTI-TENANT
 app.use(cors({
     credentials: true, 
-    origin: [
-        "http://localhost",
-        "http://localhost:80",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:5176",
-        "http://localhost:3000",
-        /^https?:\/\/[a-z0-9-]+\.fomezap\.com$/,  // Subdomínios em produção
-        /^https?:\/\/[a-z0-9-]+\.localhost:[0-9]+$/,  // Subdomínios em desenvolvimento
-        /^https:\/\/.*\.vercel\.app$/  // Qualquer deploy Vercel
-    ]
+    origin: function(origin, callback) {
+        // Permitir requests sem origin (mobile apps, Postman)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            "http://localhost",
+            "http://localhost:80",
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:3000",
+            "https://fomezap.netlify.app",
+            "https://demo.fomezap.com",
+            "https://familia.fomezap.com",
+            "https://lanchonete-em-familia.fomezap.com",
+            "https://thi-burg.fomezap.com"
+        ];
+        
+        // Verificar origins permitidas ou patterns
+        if (allowedOrigins.includes(origin) ||
+            /^https?:\/\/[a-z0-9-]+\.fomezap\.com$/.test(origin) ||
+            /^https?:\/\/[a-z0-9-]+\.localhost:[0-9]+$/.test(origin) ||
+            /^https:\/\/.*\.vercel\.app$/.test(origin) ||
+            /^https:\/\/.*\.netlify\.app$/.test(origin)) {
+            callback(null, true);
+        } else {
+            console.warn('⚠️  Origin bloqueada pelo CORS:', origin);
+            callback(new Error('Origin não permitida pelo CORS'));
+        }
+    }
 }))
 
-// === ROTAS PÚBLICAS (SEM AUTENTICAÇÃO) ===
-// Autenticação
+// ============================================================
+// ORDEM CRÍTICA DAS ROTAS - NÃO ALTERAR!
+// Rotas mais específicas DEVEM vir ANTES das genéricas
+// ============================================================
+
+// === ROTAS DO SUPER ADMIN (SEM DETECÇÃO DE TENANT) ===
+// DEVE ser a PRIMEIRA rota /api/* para evitar conflito com outras rotas genéricas
+app.use("/api/super-admin", superAdminRoutes);
+
+// === ROTAS DE AUTENTICAÇÃO (SEM DETECÇÃO DE TENANT) ===
 app.use("/api/auth", authRoutes);
 
-// Cardápio público (para clientes acessarem sem login)
-app.use("/api", publicRoutes);
-
-// Upload de fotos (público para testar, depois proteger)
-app.post("/api/upload/foto", upload.single('foto'), handleMulterError, UploadController.uploadFoto);
-app.get("/api/upload/fotos-padrao", UploadController.listarFotosPadrao);
-
-// === ROTAS DO PAINEL ADMINISTRATIVO (PROTEGIDAS) ===
+// === ROTAS DO PAINEL ADMINISTRATIVO (SEM DETECÇÃO DE TENANT - USA TOKEN) ===
 // Proteger todas as rotas /api/admin/* com autenticação
-// Nota: verificarTenantAdmin aplicado dentro das rotas para ter acesso ao req.params
 app.use("/api/admin", verificarToken, adminRoutes);
 
-// Deletar foto (protegida)
-app.delete("/api/upload/foto/:filename", verificarToken, UploadController.deletarFoto);
+// === MIDDLEWARE DE DETECÇÃO DE TENANT ===
+// A partir daqui, TODAS as rotas passam pela detecção de tenant
+app.use(detectarTenant);
 
-// === ROTAS DE UPLOAD (ANTIGAS - MANTER COMPATIBILIDADE) ===
-// app.use("/api", uploadRoutes);
+// === ROTAS PÚBLICAS DO CARDÁPIO (COM DETECÇÃO DE TENANT) ===
+app.use("/api", publicRoutes);
+
+// === UPLOAD DE FOTOS ===
+app.post("/api/upload/foto", upload.single('foto'), handleMulterError, UploadController.uploadFoto);
+app.get("/api/upload/fotos-padrao", UploadController.listarFotosPadrao);
+app.delete("/api/upload/foto/:filename", verificarToken, UploadController.deletarFoto);
 
 // === ROTAS MULTI-TENANT (FomeZap) - POR ÚLTIMO ===
 app.use("/api", tenantRoutes);
@@ -91,6 +119,15 @@ app.get("/detect-tenant", (req, res) => {
         tenantId,
         detected: !!tenantId,
         environment: process.env.NODE_ENV || 'development'
+    });
+});
+
+// === MIDDLEWARE 404 (deve vir antes do erro global) ===
+app.use((req, res, next) => {
+    res.status(404).json({ 
+        error: 'Rota não encontrada',
+        path: req.path,
+        method: req.method
     });
 });
 

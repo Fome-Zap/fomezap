@@ -1,13 +1,35 @@
 // src/components/Admin/AdminLayout.jsx - Layout do painel admin
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../api/api';
 
 function AdminLayout() {
   const [menuAberto, setMenuAberto] = useState(false);
   const [modalSair, setModalSair] = useState(false);
+  const [tenantSlug, setTenantSlug] = useState(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Buscar slug do tenant
+  useEffect(() => {
+    const buscarTenantSlug = async () => {
+      try {
+        console.log('🔍 Buscando slug para tenantId:', user?.tenantId);
+        const response = await api.get(`/api/admin/${user?.tenantId}/configuracoes`);
+        console.log('📦 Resposta configurações:', response.data);
+        const slug = response.data.tenant?.slug || user?.tenantId;
+        console.log('✅ Slug definido como:', slug);
+        setTenantSlug(slug);
+      } catch (error) {
+        console.error('❌ Erro ao buscar slug do tenant:', error);
+        setTenantSlug(user?.tenantId); // Fallback para tenantId
+      }
+    };
+    if (user?.tenantId) {
+      buscarTenantSlug();
+    }
+  }, [user?.tenantId]);
 
   const handleLogout = () => {
     logout();
@@ -59,7 +81,7 @@ function AdminLayout() {
             </svg>
           </button>
           
-          <h1 className="text-2xl font-bold text-blue-600 pr-12 md:pr-0">FomeZap Admin</h1>
+          <img src="/img/fomezap_logoLaranjaFundoTranspHoriz.png" alt="FomeZap Admin" className="h-10 pr-12 md:pr-0" />
           <p className="text-sm text-gray-500 mt-1">Tenant: {user?.tenantId || 'demo'}</p>
           <div className="mt-3 p-3 bg-blue-50 rounded-lg">
             <p className="text-xs text-gray-600">👤 {user?.nome}</p>
@@ -163,7 +185,7 @@ function AdminLayout() {
           <div className="border-t border-gray-200 mt-auto"></div>
 
           <a
-            href="/?tenant=demo"
+            href={tenantSlug ? `/?tenant=${tenantSlug}` : `/?tenant=${user?.tenantId || 'demo'}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setMenuAberto(false)}

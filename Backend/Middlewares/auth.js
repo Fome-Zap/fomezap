@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { Tenant } from '../Models/TenantModels.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-aqui-2024';
 
@@ -52,13 +53,13 @@ export const verificarToken = (req, res, next) => {
 };
 
 // Middleware para verificar se usuário é admin do tenant
-export const verificarTenantAdmin = (req, res, next) => {
+export const verificarTenantAdmin = async (req, res, next) => {
   try {
-    const { tenantId } = req.params;
+    const { tenantId: urlTenantParam } = req.params;
     
     // Log para debug
     console.log('🔍 verificarTenantAdmin:', {
-      urlTenantId: tenantId,
+      urlTenantParam,
       userTenantId: req.tenantId,
       userRole: req.userRole,
       userId: req.userId
@@ -70,15 +71,51 @@ export const verificarTenantAdmin = (req, res, next) => {
       return next();
     }
 
-    // Tenant admin e employee só podem acessar seu próprio tenant
-    if (req.tenantId !== tenantId) {
-      console.log('❌ Acesso negado - tenant diferente');
-      return res.status(403).json({ 
-        mensagem: 'Acesso negado. Você não tem permissão para acessar este tenant.' 
+    // Buscar o tenant da URL (pode ser slug ou tenantId)
+    const urlTenant = await Tenant.findOne({
+      $or: [
+        { slug: urlTenantParam },
+        { tenantId: urlTenantParam }
+      ]
+    });
+
+    if (!urlTenant) {
+      console.log('❌ Tenant da URL não encontrado:', urlTenantParam);
+      return res.status(404).json({ 
+        mensagem: 'Tenant não encontrado',
+        detalhes: `Não foi possível encontrar tenant com slug ou ID: ${urlTenantParam}`
       });
     }
 
-    console.log('✅ Acesso permitido');
+    console.log('🏪 Tenant da URL encontrado:', {
+      nome: urlTenant.nome,
+      tenantId: urlTenant.tenantId,
+      slug: urlTenant.slug
+    });
+
+    // Tenant admin e employee só podem acessar seu próprio tenant
+    // Comparar tenantId real (ObjectId) de ambos - convertendo para string para comparação
+    const userTenantIdStr = String(req.tenantId);
+    const urlTenantIdStr = String(urlTenant.tenantId);
+    
+    console.log('🔍 Comparando tenantIds (convertidos para string):', {
+      userTenantId: userTenantIdStr,
+      urlTenantId: urlTenantIdStr,
+      saoIguais: userTenantIdStr === urlTenantIdStr
+    });
+    
+    if (userTenantIdStr !== urlTenantIdStr) {
+      console.log('❌ Acesso negado - tenant diferente:', {
+        userTenantId: userTenantIdStr,
+        urlTenantId: urlTenantIdStr
+      });
+      return res.status(403).json({ 
+        mensagem: 'Acesso negado. Você não tem permissão para acessar este tenant.',
+        detalhes: `Seu tenantId: ${userTenantIdStr}, Tentando acessar: ${urlTenantIdStr}`
+      });
+    }
+
+    console.log('✅ Acesso permitido ao tenant:', urlTenant.nome);
     next();
 
   } catch (error) {
@@ -94,6 +131,7 @@ export const verificarTenantAdmin = (req, res, next) => {
 export const verificarSuperAdmin = (req, res, next) => {
   try {
     if (req.userRole !== 'super_admin') {
+      console.log('❌ Acesso negado: usuário não é super_admin');
       return res.status(403).json({ 
         mensagem: 'Acesso negado. Apenas super administradores podem acessar este recurso.' 
       });

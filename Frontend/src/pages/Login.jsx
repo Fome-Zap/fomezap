@@ -1,10 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../api/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (user) {
+      const role = user.role;
+      if (role === 'super_admin') {
+        navigate('/super-admin');
+      } else {
+        navigate('/admin');
+      }
+    }
+  }, [user, navigate]);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -13,6 +26,11 @@ export default function Login() {
   
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
   const [carregando, setCarregando] = useState(false);
+  
+  // Estados para recuperação de senha
+  const [showRecuperarSenha, setShowRecuperarSenha] = useState(false);
+  const [emailRecuperacao, setEmailRecuperacao] = useState('');
+  const [loadingRecuperacao, setLoadingRecuperacao] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -34,12 +52,25 @@ export default function Login() {
     setCarregando(true);
 
     try {
-      await login(formData.email, formData.senha);
+      const userData = await login(formData.email, formData.senha);
       setMensagem({ tipo: 'sucesso', texto: 'Login realizado! Redirecionando...' });
       
-      // Redirecionar após 1 segundo
+      console.log('🔍 Dados do login:', userData);
+      
+      // Redirecionar após 1 segundo baseado na role
       setTimeout(() => {
-        navigate('/admin');
+        // userData = { token, usuario }
+        const role = userData.usuario?.role || userData.role;
+        
+        console.log('🎯 Role detectada:', role);
+        
+        if (role === 'super_admin') {
+          console.log('✅ Redirecionando para /super-admin');
+          navigate('/super-admin');
+        } else {
+          console.log('✅ Redirecionando para /admin');
+          navigate('/admin');
+        }
       }, 1000);
 
     } catch (error) {
@@ -47,6 +78,50 @@ export default function Login() {
       setMensagem({ tipo: 'erro', texto: mensagemErro });
     } finally {
       setCarregando(false);
+    }
+  };
+
+  const handleRecuperarSenha = async (e) => {
+    e.preventDefault();
+    
+    if (!emailRecuperacao) {
+      setMensagem({ tipo: 'erro', texto: 'Digite seu email' });
+      return;
+    }
+
+    setLoadingRecuperacao(true);
+    setMensagem({ tipo: '', texto: '' });
+
+    try {
+      const response = await api.post('/api/auth/recuperar-senha', {
+        email: emailRecuperacao
+      });
+
+      // Mostrar senha temporária (apenas para desenvolvimento)
+      if (response.data.senhaTemporaria) {
+        setMensagem({ 
+          tipo: 'sucesso', 
+          texto: `Senha temporária: ${response.data.senhaTemporaria}\n\n${response.data.aviso}` 
+        });
+      } else {
+        setMensagem({ 
+          tipo: 'sucesso', 
+          texto: response.data.mensagem 
+        });
+      }
+
+      // Fechar modal após 8 segundos
+      setTimeout(() => {
+        setShowRecuperarSenha(false);
+        setEmailRecuperacao('');
+        setMensagem({ tipo: '', texto: '' });
+      }, 8000);
+
+    } catch (error) {
+      const mensagemErro = error.response?.data?.mensagem || 'Erro ao recuperar senha';
+      setMensagem({ tipo: 'erro', texto: mensagemErro });
+    } finally {
+      setLoadingRecuperacao(false);
     }
   };
 
@@ -133,7 +208,15 @@ export default function Login() {
 
         {/* Links adicionais */}
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Esqueceu sua senha? <a href="#" className="text-orange-500 hover:underline">Recuperar</a></p>
+          <p>
+            Esqueceu sua senha? {' '}
+            <button 
+              onClick={() => setShowRecuperarSenha(true)}
+              className="text-orange-500 hover:underline font-medium"
+            >
+              Recuperar
+            </button>
+          </p>
         </div>
 
         {/* Versão de desenvolvimento - credenciais de teste */}
@@ -146,6 +229,66 @@ export default function Login() {
           </div>
         )}
       </div>
+
+      {/* Modal de Recuperação de Senha */}
+      {showRecuperarSenha && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-4">🔑</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Recuperar Senha</h2>
+              <p className="text-gray-600 text-sm">Digite seu email cadastrado</p>
+            </div>
+
+            <form onSubmit={handleRecuperarSenha} className="space-y-4">
+              <div>
+                <label htmlFor="emailRecuperacao" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="emailRecuperacao"
+                  value={emailRecuperacao}
+                  onChange={(e) => setEmailRecuperacao(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
+                  placeholder="seu@email.com"
+                  disabled={loadingRecuperacao}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRecuperarSenha(false);
+                    setEmailRecuperacao('');
+                    setMensagem({ tipo: '', texto: '' });
+                  }}
+                  disabled={loadingRecuperacao}
+                  className="flex-1 py-3 rounded-lg font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingRecuperacao}
+                  className={`flex-1 py-3 rounded-lg font-semibold text-white transition ${
+                    loadingRecuperacao
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-orange-500 hover:bg-orange-600 active:scale-95'
+                  }`}
+                >
+                  {loadingRecuperacao ? 'Enviando...' : 'Recuperar'}
+                </button>
+              </div>
+            </form>
+
+            <p className="text-xs text-gray-500 mt-4 text-center">
+              💡 Em produção, você receberia um email com instruções
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

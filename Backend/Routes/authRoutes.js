@@ -7,6 +7,8 @@ const router = express.Router();
 // Rotas públicas (sem autenticação)
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
+router.post('/recuperar-senha', AuthController.recuperarSenha);
+router.post('/resetar-senha/:token', AuthController.resetarSenha);
 
 // Rotas protegidas (requerem autenticação)
 router.get('/me', verificarToken, AuthController.me);
