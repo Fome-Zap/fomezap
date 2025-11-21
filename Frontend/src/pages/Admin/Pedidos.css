@@ -442,75 +442,103 @@
   font-size: 1.2rem;
 }
 
-/* Impressão - Otimizado para Mobile (Safari iOS, Chrome Android) */
+/* Impressão - Compatível Safari iOS e Chrome Mobile */
 .print-only {
-  display: none;
+  display: none !important;
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
 }
 
 @media print {
-  /* Esconde TODOS os elementos da página EXCETO .print-only */
-  body > *:not(.print-only) {
-    display: none !important;
-  }
-  
-  /* Força exibição da área de impressão */
-  .print-only {
-    display: block !important;
-    position: static !important;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  
-  /* Reset de estilos globais para garantir renderização mobile */
+  /* Reset completo para impressão mobile */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  /* Esconde TODO o conteúdo da página */
+  body,
+  body * {
+    visibility: hidden !important;
+    display: none !important;
+  }
+  
+  /* Mostra APENAS a área de impressão */
+  .print-only,
+  .print-only *,
+  .print-only * * {
+    visibility: visible !important;
+    display: block !important;
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+  }
+  
+  /* Força exibição da área de impressão na raiz */
+  .print-only {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
   }
   
   .comanda-impressao {
-    padding: 20px;
-    font-family: 'Courier New', monospace;
-    background: white;
-    color: black;
+    display: block !important;
+    padding: 20px !important;
+    font-family: 'Courier New', monospace !important;
+    background: white !important;
+    color: black !important;
+    width: 100% !important;
   }
 
   /* Impressora 58mm (58.5mm de largura real) */
   .comanda-58mm {
-    max-width: 58mm;
-    font-size: 10px;
+    max-width: 58mm !important;
+    font-size: 10px !important;
   }
 
   /* Impressora 80mm (79.5mm de largura real) */
   .comanda-80mm {
-    max-width: 80mm;
-    font-size: 12px;
+    max-width: 80mm !important;
+    font-size: 12px !important;
   }
   
   .comanda-impressao h2,
   .comanda-impressao h3,
   .comanda-impressao h4 {
-    margin: 10px 0;
-    page-break-inside: avoid;
+    display: block !important;
+    margin: 10px 0 !important;
+    page-break-inside: avoid !important;
+    color: black !important;
   }
   
   .comanda-impressao p {
-    margin: 5px 0;
-    word-wrap: break-word;
-    page-break-inside: avoid;
+    display: block !important;
+    margin: 5px 0 !important;
+    word-wrap: break-word !important;
+    page-break-inside: avoid !important;
+    color: black !important;
   }
   
   .comanda-impressao hr {
-    border: none;
-    border-top: 2px dashed #000;
-    margin: 15px 0;
+    display: block !important;
+    border: none !important;
+    border-top: 2px dashed #000 !important;
+    margin: 15px 0 !important;
+  }
+  
+  .comanda-impressao div {
+    display: block !important;
   }
   
   /* Previne quebra de página indesejada */
   .comanda-impressao {
-    page-break-inside: avoid;
+    page-break-inside: avoid !important;
   }
 }
 

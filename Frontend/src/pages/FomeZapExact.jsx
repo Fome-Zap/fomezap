@@ -154,6 +154,24 @@ function FomeZapExact() {
         if (categoriaId && categoriaId !== ultimaCategoriaVisivel) {
           ultimaCategoriaVisivel = categoriaId;
           setCategoriaVisivel(categoriaId);
+          
+          // Scroll horizontal automático para mostrar categoria ativa
+          const categoryButton = document.querySelector(`.filter-btn[data-category="${categoriaId}"]`);
+          const container = categoryFilterRef.current;
+          
+          if (categoryButton && container) {
+            const buttonRect = categoryButton.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            // Calcular se o botão está fora da view
+            const isOutOfView = buttonRect.left < containerRect.left || buttonRect.right > containerRect.right;
+            
+            if (isOutOfView) {
+              // Centralizar o botão no container
+              const scrollPosition = categoryButton.offsetLeft - (container.offsetWidth / 2) + (categoryButton.offsetWidth / 2);
+              container.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+            }
+          }
         }
       }
     };
@@ -172,6 +190,41 @@ function FomeZapExact() {
       observer.disconnect();
     };
   }, [categorias, categoriaAtiva]);
+
+  // useEffect para detectar conteúdo rolável no modal de extras
+  useEffect(() => {
+    if (!extrasModalOpen) return;
+
+    const checkScrollable = () => {
+      const extrasList = document.querySelector('.extras-list');
+      if (!extrasList) return;
+
+      const hasScroll = extrasList.scrollHeight > extrasList.clientHeight;
+      
+      if (hasScroll) {
+        extrasList.classList.add('has-more');
+        
+        // Remover indicador quando rolar até o fim
+        const handleScroll = () => {
+          const isAtBottom = extrasList.scrollHeight - extrasList.scrollTop <= extrasList.clientHeight + 10;
+          if (isAtBottom) {
+            extrasList.classList.remove('has-more');
+          } else {
+            extrasList.classList.add('has-more');
+          }
+        };
+        
+        extrasList.addEventListener('scroll', handleScroll);
+        return () => extrasList.removeEventListener('scroll', handleScroll);
+      } else {
+        extrasList.classList.remove('has-more');
+      }
+    };
+
+    // Aguardar renderização do modal
+    const timer = setTimeout(checkScrollable, 100);
+    return () => clearTimeout(timer);
+  }, [extrasModalOpen, currentItem]);
 
   // Funções para scroll suave nas setas
   const scrollLeft = () => {
@@ -721,7 +774,7 @@ function FomeZapExact() {
         }}>
           <div className="category-filter" ref={categoryFilterRef}>
             <button
-              className={`filter-btn ${categoriaAtiva === 'all' ? 'active' : ''}`}
+              className={`filter-btn ${categoriaAtiva === 'all' && !categoriaVisivel ? 'active' : ''}`}
               onClick={() => setCategoriaAtiva('all')}
             >
               Todos

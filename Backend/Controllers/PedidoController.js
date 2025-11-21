@@ -349,93 +349,81 @@ export default class PedidoController {
     }
   }
 
-  // Função auxiliar para gerar link do WhatsApp (formatação otimizada)
+  // Função auxiliar para gerar link do WhatsApp (formatação compacta)
   static gerarLinkWhatsApp(pedido, tenant) {
     const formatarPreco = (valor) => `R$ ${Number(valor).toFixed(2).replace('.', ',')}`;
-    const linha = () => '━━━━━━━━━━━━━━━━━━━━━━━━━━';
     
     let msg = [];
     
     // CABEÇALHO
-    msg.push(`🏪 *${tenant.nome || 'FomeZap'}*`);
-    if (tenant.configuracoes?.mensagemWhatsApp) {
-      msg.push(tenant.configuracoes.mensagemWhatsApp);
-    }
-    msg.push(linha());
-    msg.push('');
+    msg.push(`== NOVO PEDIDO: #${pedido.numeroPedido} ==`);
     
-    // DADOS DO PEDIDO
-    msg.push(`📋 *PEDIDO #${pedido.numeroPedido}*`);
+    // DATA
     const data = new Date(pedido.createdAt || Date.now());
-    msg.push(`📅 ${data.toLocaleDateString('pt-BR')} • ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
-    msg.push('');
+    const dataFormatada = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    msg.push(`📋Data: ${dataFormatada}, ${horaFormatada}`);
     
     // CLIENTE
-    msg.push(`👤 *Cliente:* ${pedido.cliente.nome}`);
-    msg.push(`📱 *Telefone:* ${pedido.cliente.telefone}`);
-    msg.push(linha());
-    msg.push('');
-    
-    // ITENS DO PEDIDO
-    msg.push('🛒 *ITENS DO PEDIDO:*');
-    msg.push('');
-    
-    pedido.itens.forEach((item, idx) => {
-      // Item principal
-      msg.push(`*${idx + 1}.* ${item.nome}`);
-      msg.push(`   ${item.quantidade}x ${formatarPreco(item.preco)}`);
-      
-      // Extras
-      if (item.extras?.length) {
-        item.extras.forEach(extra => {
-          msg.push(`   ↳ _+ ${extra.nome}_ ${formatarPreco(extra.preco)}`);
-        });
-      }
-      
-      // Observações do item
-      if (item.observacoes) {
-        msg.push(`   📝 _${item.observacoes}_`);
-      }
-      
-      // Subtotal do item
-      msg.push(`   💵 Subtotal: *${formatarPreco(item.subtotal)}*`);
-      msg.push('');
-    });
-    
-    msg.push(linha());
-    msg.push('');
+    msg.push(`👤Cliente: ${pedido.cliente.nome}`);
+    if (pedido.cliente.telefone) {
+      msg.push(`📱Telefone: ${pedido.cliente.telefone}`);
+    }
     
     // ENTREGA/RETIRADA
     if (pedido.entrega.tipo === 'delivery') {
-      msg.push('🚚 *ENTREGA*');
+      msg.push(`🚚Tipo: Entrega`);
       if (pedido.entrega.endereco) {
-        msg.push(`📍 ${pedido.entrega.endereco}`);
-      }
-      if (pedido.entrega.taxa && pedido.entrega.taxa > 0) {
-        msg.push(`🚚 Taxa: ${formatarPreco(pedido.entrega.taxa)}`);
+        msg.push(`📍Endereço: ${pedido.entrega.endereco}`);
       }
     } else {
-      msg.push('🏪 *RETIRADA NO LOCAL*');
+      msg.push(`🏪Tipo: Retirada`);
     }
-    msg.push('');
     
     // PAGAMENTO
-    msg.push(`💳 *Pagamento:* ${pedido.pagamento.forma}`);
+    msg.push(`💳Pagamento: ${pedido.pagamento.forma}`);
     msg.push('');
     
-    // OBSERVAÇÕES GERAIS
-    if (pedido.observacoes) {
-      msg.push('📝 *Observações Gerais:*');
-      msg.push(pedido.observacoes);
-      msg.push('');
+    // ITENS
+    msg.push('=== ITENS PEDIDOS ===');
+    
+    pedido.itens.forEach((item, idx) => {
+      // Código do produto (usar índice como código) - Nome - Quantidade - Preço unitário
+      const codigo = String(item.produtoId).slice(-2).padStart(2, '0');
+      msg.push(`${codigo} - ${item.nome.toUpperCase()} (${item.quantidade}x) - ${formatarPreco(item.preco)}`);
+      
+      // Extras na mesma linha, separados por |
+      if (item.extras?.length) {
+        const extrasFormatados = item.extras
+          .map(e => `+${e.nome.toUpperCase()}: ${formatarPreco(e.preco)}`)
+          .join(' | ');
+        msg.push(extrasFormatados);
+      }
+      
+      // Observações do item (se houver)
+      if (item.observacoes) {
+        msg.push(`OBS: ${item.observacoes}`);
+      }
+      
+      msg.push('--------------------------');
+    });
+    
+    // RESUMO
+    msg.push('=== RESUMO ===');
+    msg.push(`Subtotal: ${formatarPreco(pedido.subtotal)}`);
+    
+    if (pedido.entrega.taxa && pedido.entrega.taxa > 0) {
+      msg.push(`🚚Taxa: ${formatarPreco(pedido.entrega.taxa)}`);
     }
     
-    // TOTAL
-    msg.push(linha());
-    msg.push(`💰 *VALOR TOTAL: ${formatarPreco(pedido.valorTotal)}*`);
-    msg.push(linha());
-    msg.push('');
-    msg.push('_Pedido gerado via FomeZap_');
+    msg.push(`💰TOTAL: ${formatarPreco(pedido.valorTotal)}`);
+    msg.push('===================');
+    
+    // Observações gerais (se houver)
+    if (pedido.observacoes) {
+      msg.push('');
+      msg.push(`📝 OBS GERAL: ${pedido.observacoes}`);
+    }
     
     const mensagem = msg.join('\n');
     const telefone = (tenant.telefone || '').replace(/\D/g, '');
