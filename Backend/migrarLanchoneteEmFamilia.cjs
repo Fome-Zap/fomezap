@@ -60,7 +60,7 @@ const Extra = mongoose.model('Extra', extraSchema);
 const Produto = mongoose.model('Produto', produtoSchema);
 
 // ===== TENANT ID (String, não ObjectId) =====
-const TENANT_ID = '691f97b15cd208a3e3c1b836';
+const TENANT_ID = '692098dccb44bd0251798c46';
 
 // ===== DADOS EXTRAÍDOS DO MIGRACAO-FAMILIA.MD =====
 
@@ -225,7 +225,7 @@ async function migrarDados() {
     console.log('🏪 Tenant ID:', TENANT_ID, '\n');
 
     // Limpar dados anteriores do tenant
-    console.log('🗑️  Limpando dados anteriores do tenant familia...');
+    console.log('🗑️  Limpando dados anteriores do tenant ...');
     const deletedProdutos = await Produto.deleteMany({ tenantId: TENANT_ID });
     const deletedExtras = await Extra.deleteMany({ tenantId: TENANT_ID });
     const deletedCategorias = await Categoria.deleteMany({ tenantId: TENANT_ID });
@@ -353,8 +353,8 @@ async function migrarDados() {
     console.log('═══════════════════════════════════════\n');
 
     console.log('🎉 Acesse o painel admin em: http://localhost:5173/login');
-    console.log('📱 Ou o cardápio em: http://localhost:5173/?tenant=familia');
-    console.log('🌐 Produção: https://familia.fomezap.com/\n');
+    console.log('📱 Ou o cardápio em: http://localhost:5173/?tenant=demo');
+    console.log('🌐 Produção: https://demo.fomezap.com/\n');
 
   } catch (error) {
     console.error('❌ Erro na migração:', error);

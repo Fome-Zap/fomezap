@@ -442,32 +442,39 @@
   font-size: 1.2rem;
 }
 
-/* Impressão */
+/* Impressão - Otimizado para Mobile (Safari iOS, Chrome Android) */
 .print-only {
   display: none;
 }
 
 @media print {
-  body * {
-    visibility: hidden;
+  /* Esconde TODOS os elementos da página EXCETO .print-only */
+  body > *:not(.print-only) {
+    display: none !important;
   }
   
-  .print-only,
-  .print-only * {
-    visibility: visible;
-  }
-  
+  /* Força exibição da área de impressão */
   .print-only {
-    position: absolute;
+    display: block !important;
+    position: static !important;
     left: 0;
     top: 0;
     width: 100%;
-    display: block;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Reset de estilos globais para garantir renderização mobile */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
   .comanda-impressao {
     padding: 20px;
     font-family: 'Courier New', monospace;
+    background: white;
+    color: black;
   }
 
   /* Impressora 58mm (58.5mm de largura real) */
@@ -486,17 +493,24 @@
   .comanda-impressao h3,
   .comanda-impressao h4 {
     margin: 10px 0;
+    page-break-inside: avoid;
   }
   
   .comanda-impressao p {
     margin: 5px 0;
     word-wrap: break-word;
+    page-break-inside: avoid;
   }
   
   .comanda-impressao hr {
     border: none;
     border-top: 2px dashed #000;
     margin: 15px 0;
+  }
+  
+  /* Previne quebra de página indesejada */
+  .comanda-impressao {
+    page-break-inside: avoid;
   }
 }
 

@@ -349,47 +349,96 @@ export default class PedidoController {
     }
   }
 
-  // Função auxiliar para gerar link do WhatsApp
+  // Função auxiliar para gerar link do WhatsApp (formatação otimizada)
   static gerarLinkWhatsApp(pedido, tenant) {
-    let mensagem = `🏪 *${tenant.nome || 'FomeZap'}*\n`;
-    mensagem += `${tenant.configuracoes.mensagemWhatsApp}\n\n`;
-    mensagem += `📋 *Pedido #${pedido.numeroPedido}*\n`;
-    mensagem += `👤 *Cliente:* ${pedido.cliente.nome}\n`;
-    mensagem += `📱 *Telefone:* ${pedido.cliente.telefone}\n\n`;
+    const formatarPreco = (valor) => `R$ ${Number(valor).toFixed(2).replace('.', ',')}`;
+    const linha = () => '━━━━━━━━━━━━━━━━━━━━━━━━━━';
     
-    mensagem += `🍕 *ITENS:*\n`;
-    pedido.itens.forEach((item, index) => {
-      mensagem += `${index + 1}. ${item.nome} - ${item.quantidade}x R$ ${item.preco.toFixed(2)}\n`;
+    let msg = [];
+    
+    // CABEÇALHO
+    msg.push(`🏪 *${tenant.nome || 'FomeZap'}*`);
+    if (tenant.configuracoes?.mensagemWhatsApp) {
+      msg.push(tenant.configuracoes.mensagemWhatsApp);
+    }
+    msg.push(linha());
+    msg.push('');
+    
+    // DADOS DO PEDIDO
+    msg.push(`📋 *PEDIDO #${pedido.numeroPedido}*`);
+    const data = new Date(pedido.createdAt || Date.now());
+    msg.push(`📅 ${data.toLocaleDateString('pt-BR')} • ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
+    msg.push('');
+    
+    // CLIENTE
+    msg.push(`👤 *Cliente:* ${pedido.cliente.nome}`);
+    msg.push(`📱 *Telefone:* ${pedido.cliente.telefone}`);
+    msg.push(linha());
+    msg.push('');
+    
+    // ITENS DO PEDIDO
+    msg.push('🛒 *ITENS DO PEDIDO:*');
+    msg.push('');
+    
+    pedido.itens.forEach((item, idx) => {
+      // Item principal
+      msg.push(`*${idx + 1}.* ${item.nome}`);
+      msg.push(`   ${item.quantidade}x ${formatarPreco(item.preco)}`);
       
+      // Extras
       if (item.extras?.length) {
         item.extras.forEach(extra => {
-          mensagem += `   + ${extra.nome} R$ ${extra.preco.toFixed(2)}\n`;
+          msg.push(`   ↳ _+ ${extra.nome}_ ${formatarPreco(extra.preco)}`);
         });
       }
       
+      // Observações do item
       if (item.observacoes) {
-        mensagem += `   📝 ${item.observacoes}\n`;
+        msg.push(`   📝 _${item.observacoes}_`);
       }
       
-      mensagem += `   💰 Subtotal: R$ ${item.subtotal.toFixed(2)}\n\n`;
+      // Subtotal do item
+      msg.push(`   💵 Subtotal: *${formatarPreco(item.subtotal)}*`);
+      msg.push('');
     });
     
-    mensagem += `🚚 *${pedido.entrega.tipo === 'delivery' ? 'ENTREGA' : 'RETIRADA'}*\n`;
-    if (pedido.entrega.endereco) {
-      mensagem += `📍 ${pedido.entrega.endereco}\n`;
-    }
-    if (pedido.entrega.taxa > 0) {
-      mensagem += `🚚 Taxa de entrega: R$ ${pedido.entrega.taxa.toFixed(2)}\n`;
-    }
+    msg.push(linha());
+    msg.push('');
     
-    mensagem += `\n💳 *Pagamento:* ${pedido.pagamento.forma}\n`;
-    mensagem += `💰 *TOTAL: R$ ${pedido.valorTotal.toFixed(2)}*\n`;
+    // ENTREGA/RETIRADA
+    if (pedido.entrega.tipo === 'delivery') {
+      msg.push('🚚 *ENTREGA*');
+      if (pedido.entrega.endereco) {
+        msg.push(`📍 ${pedido.entrega.endereco}`);
+      }
+      if (pedido.entrega.taxa && pedido.entrega.taxa > 0) {
+        msg.push(`🚚 Taxa: ${formatarPreco(pedido.entrega.taxa)}`);
+      }
+    } else {
+      msg.push('🏪 *RETIRADA NO LOCAL*');
+    }
+    msg.push('');
     
+    // PAGAMENTO
+    msg.push(`💳 *Pagamento:* ${pedido.pagamento.forma}`);
+    msg.push('');
+    
+    // OBSERVAÇÕES GERAIS
     if (pedido.observacoes) {
-      mensagem += `\n📝 *Observações:* ${pedido.observacoes}`;
+      msg.push('📝 *Observações Gerais:*');
+      msg.push(pedido.observacoes);
+      msg.push('');
     }
     
-    const telefone = tenant.telefone.replace(/\D/g, '');
+    // TOTAL
+    msg.push(linha());
+    msg.push(`💰 *VALOR TOTAL: ${formatarPreco(pedido.valorTotal)}*`);
+    msg.push(linha());
+    msg.push('');
+    msg.push('_Pedido gerado via FomeZap_');
+    
+    const mensagem = msg.join('\n');
+    const telefone = (tenant.telefone || '').replace(/\D/g, '');
     return `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
   }
 }
