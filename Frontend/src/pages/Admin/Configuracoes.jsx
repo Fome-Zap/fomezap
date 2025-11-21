@@ -276,8 +276,8 @@ export default function Configuracoes() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">⚙️ Configurações</h1>
-        <p className="text-gray-600">Configure seu restaurante e delivery</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">⚙️ Configurações</h1>
+        <p className="text-sm md:text-base text-gray-600">Configure seu restaurante e delivery</p>
       </div>
 
       <div className="space-y-6">
@@ -331,13 +331,13 @@ export default function Configuracoes() {
               <label className="block text-sm font-medium text-gray-700">
                 📧 Email de Login
               </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-4 py-2 bg-gray-50 rounded text-gray-500 font-mono text-sm border border-gray-300">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <code className="flex-1 px-4 py-2 bg-gray-50 rounded text-gray-500 font-mono text-sm border border-gray-300 break-all">
                   {tenantInfo.email || user?.email || 'Não disponível'}
                 </code>
                 <button
                   onClick={() => setShowModalEmail(true)}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium flex items-center gap-2"
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   ✏️ Alterar Email
                 </button>

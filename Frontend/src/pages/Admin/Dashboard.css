@@ -244,10 +244,13 @@
   padding: 1rem 0;
   position: relative;
   border-bottom: 3px solid #e5e7eb; /* Linha de base */
+  overflow-x: auto; /* Permite scroll horizontal se necessário */
+  overflow-y: visible;
 }
 
 .barra-wrapper {
   flex: 1;
+  min-width: 60px; /* Largura mínima para cada barra */
   display: flex;
   flex-direction: column;
   align-items: center;

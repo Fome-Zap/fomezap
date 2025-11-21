@@ -349,81 +349,108 @@ export default class PedidoController {
     }
   }
 
-  // Função auxiliar para gerar link do WhatsApp (formatação compacta)
+  // Função auxiliar para gerar link do WhatsApp (formatação idêntica ao modelo)
   static gerarLinkWhatsApp(pedido, tenant) {
     const formatarPreco = (valor) => `R$ ${Number(valor).toFixed(2).replace('.', ',')}`;
     
     let msg = [];
     
-    // CABEÇALHO
-    msg.push(`== NOVO PEDIDO: #${pedido.numeroPedido} ==`);
+    // LINHA SUPERIOR (====)
+    msg.push('═══════════════════════════════════════════════════════════');
     
-    // DATA
-    const data = new Date(pedido.createdAt || Date.now());
-    const dataFormatada = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-    const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    msg.push(`📋Data: ${dataFormatada}, ${horaFormatada}`);
-    
-    // CLIENTE
-    msg.push(`👤Cliente: ${pedido.cliente.nome}`);
-    if (pedido.cliente.telefone) {
-      msg.push(`📱Telefone: ${pedido.cliente.telefone}`);
-    }
-    
-    // ENTREGA/RETIRADA
-    if (pedido.entrega.tipo === 'delivery') {
-      msg.push(`🚚Tipo: Entrega`);
-      if (pedido.entrega.endereco) {
-        msg.push(`📍Endereço: ${pedido.entrega.endereco}`);
-      }
-    } else {
-      msg.push(`🏪Tipo: Retirada`);
-    }
-    
-    // PAGAMENTO
-    msg.push(`💳Pagamento: ${pedido.pagamento.forma}`);
+    // CABEÇALHO - PEDIDO (negrito no WhatsApp com *)
+    msg.push(`*PEDIDO #${pedido.numeroPedido}*`);
     msg.push('');
     
-    // ITENS
-    msg.push('=== ITENS PEDIDOS ===');
+    // DATA E HORA
+    const data = new Date(pedido.createdAt || Date.now());
+    const dataFormatada = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    msg.push(`📅 ${dataFormatada} • ${horaFormatada}`);
+    msg.push('');
     
+    // CLIENTE
+    msg.push(`👤 Cliente: ${pedido.cliente.nome}`);
+    
+    // TELEFONE (com formatação)
+    if (pedido.cliente.telefone) {
+      msg.push(`📱 Telefone: ${pedido.cliente.telefone}`);
+    }
+    
+    // SEPARADOR PRINCIPAL
+    msg.push('═══════════════════════════════════════════════════════════');
+    
+    // ITENS DO PEDIDO (negrito)
+    msg.push('🛒 *ITENS DO PEDIDO:*');
+    msg.push('');
+    
+    // LISTAR ITENS
     pedido.itens.forEach((item, idx) => {
-      // Código do produto (usar índice como código) - Nome - Quantidade - Preço unitário
-      const codigo = String(item.produtoId).slice(-2).padStart(2, '0');
-      msg.push(`${codigo} - ${item.nome.toUpperCase()} (${item.quantidade}x) - ${formatarPreco(item.preco)}`);
+      // Número do item + Nome em negrito + quantidade + preço
+      msg.push(`*${idx + 1}.* *${item.nome.toUpperCase()}* ${item.quantidade}x R$ ${formatarPreco(item.preco)}`);
       
-      // Extras na mesma linha, separados por |
+      // Extras em itálico (usando _)
       if (item.extras?.length) {
-        const extrasFormatados = item.extras
-          .map(e => `+${e.nome.toUpperCase()}: ${formatarPreco(e.preco)}`)
-          .join(' | ');
-        msg.push(extrasFormatados);
+        item.extras.forEach(extra => {
+          msg.push(`_+${extra.nome.toUpperCase()} R$ ${formatarPreco(extra.preco)}_`);
+        });
       }
       
       // Observações do item (se houver)
       if (item.observacoes) {
-        msg.push(`OBS: ${item.observacoes}`);
+        msg.push(`_Obs: ${item.observacoes}_`);
       }
       
-      msg.push('--------------------------');
+      msg.push('');
     });
     
-    // RESUMO
-    msg.push('=== RESUMO ===');
-    msg.push(`Subtotal: ${formatarPreco(pedido.subtotal)}`);
+    // SUBTOTAL
+    msg.push(`💰 Subtotal: R$ ${formatarPreco(pedido.subtotal)}`);
     
-    if (pedido.entrega.taxa && pedido.entrega.taxa > 0) {
-      msg.push(`🚚Taxa: ${formatarPreco(pedido.entrega.taxa)}`);
+    // SEPARADOR SECUNDÁRIO
+    msg.push('──────────────────────────────────');
+    
+    // ENTREGA/RETIRADA
+    if (pedido.entrega.tipo === 'delivery') {
+      msg.push('🏍️ *ENTREGA*');
+      if (pedido.entrega.endereco) {
+        msg.push(`📍 ${pedido.entrega.endereco}`);
+      }
+      if (pedido.entrega.taxa && pedido.entrega.taxa > 0) {
+        msg.push(`💲 Taxa: R$ ${formatarPreco(pedido.entrega.taxa)}`);
+      }
+    } else {
+      msg.push('🏪 *RETIRADA NO LOCAL*');
     }
     
-    msg.push(`💰TOTAL: ${formatarPreco(pedido.valorTotal)}`);
-    msg.push('===================');
+    // SEPARADOR SECUNDÁRIO
+    msg.push('──────────────────────────────────');
     
-    // Observações gerais (se houver)
+    // PAGAMENTO
+    msg.push(`💰 Pagamento: ${pedido.pagamento.forma}`);
+    
+    // Troco (se houver)
+    if (pedido.pagamento.troco && pedido.pagamento.troco > 0) {
+      msg.push(`💵 Troco para: R$ ${formatarPreco(pedido.pagamento.troco)}`);
+    }
+    
+    msg.push('');
+    
+    // VALOR TOTAL (negrito)
+    msg.push(`💲*VALOR TOTAL: R$ ${formatarPreco(pedido.valorTotal)}*`);
+    
+    // OBSERVAÇÕES GERAIS (se houver)
     if (pedido.observacoes) {
       msg.push('');
-      msg.push(`📝 OBS GERAL: ${pedido.observacoes}`);
+      msg.push(`📝 _Observações: ${pedido.observacoes}_`);
     }
+    
+    msg.push('');
+    msg.push('');
+    
+    // RODAPÉ (itálico)
+    msg.push(`_Pedido gerado via ${tenant.nome || 'FomeZap'}_`);
+    msg.push('═══════════════════════════════════════════════════════════');
     
     const mensagem = msg.join('\n');
     const telefone = (tenant.telefone || '').replace(/\D/g, '');

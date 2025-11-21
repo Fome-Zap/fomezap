@@ -46,9 +46,9 @@ function AdminLayout() {
       {!menuAberto && (
         <button
           onClick={() => setMenuAberto(true)}
-          className="fixed top-4 left-4 z-50 md:hidden bg-blue-600 text-white p-2 rounded-lg shadow-lg"
+          className="fixed top-3 left-3 z-50 md:hidden bg-blue-600 text-white p-2.5 rounded-lg shadow-md hover:shadow-lg transition-shadow"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
@@ -250,7 +250,7 @@ function AdminLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto md:ml-0">
-        <div className="p-4 md:p-6 lg:p-8">
+        <div className="pt-14 px-4 pb-4 md:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>

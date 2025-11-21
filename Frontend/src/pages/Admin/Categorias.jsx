@@ -162,27 +162,27 @@ function Categorias() {
   };
 
   const renderCategoriaCard = (categoria) => (
-    <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
-      {modoOrdenacao && (
-        <div className="flex items-center text-gray-400 cursor-move mr-3">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
-          </svg>
-        </div>
-      )}
-      
-      <div className="flex items-center gap-3 flex-1">
-        <span className="text-3xl">{categoria.icone}</span>
-        <div>
-          <h3 className="font-semibold text-gray-800">{categoria.nome}</h3>
+    <div className="bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        {modoOrdenacao && (
+          <div className="flex items-center text-gray-400 cursor-move flex-shrink-0">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+            </svg>
+          </div>
+        )}
+        
+        <span className="text-3xl flex-shrink-0">{categoria.icone}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-gray-800 truncate">{categoria.nome}</h3>
           <p className="text-sm text-gray-500">
             {categoria.totalProdutos || 0} produto(s)
           </p>
         </div>
       </div>
       
-      <div className="flex items-center gap-2">
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+      <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+        <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
           categoria.ativa 
             ? 'bg-green-100 text-green-700' 
             : 'bg-gray-100 text-gray-700'
@@ -194,13 +194,13 @@ function Categorias() {
           <>
             <button
               onClick={() => abrirModal(categoria)}
-              className="bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 text-sm font-medium"
+              className="bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 text-sm font-medium whitespace-nowrap"
             >
               Editar
             </button>
             <button
               onClick={() => handleDeletar(categoria)}
-              className="bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 text-sm font-medium"
+              className="bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 text-sm font-medium whitespace-nowrap"
             >
               Deletar
             </button>

@@ -205,6 +205,100 @@ export default function Pedidos() {
     }, 100);
   };
 
+  // Copiar texto da comanda para clipboard
+  const copiarComanda = async (pedido) => {
+    try {
+      const texto = gerarTextoComanda(pedido);
+      await navigator.clipboard.writeText(texto);
+      
+      // Feedback visual (toast ou alert)
+      const toastDiv = document.createElement('div');
+      toastDiv.className = 'toast-notification toast-success';
+      toastDiv.innerHTML = '✅ Comanda copiada! Cole no app da impressora térmica.';
+      document.body.appendChild(toastDiv);
+      
+      setTimeout(() => {
+        toastDiv.remove();
+      }, 3000);
+    } catch (error) {
+      console.error('Erro ao copiar:', error);
+      alert('Erro ao copiar comanda. Tente novamente.');
+    }
+  };
+
+  // Gerar texto formatado da comanda
+  const gerarTextoComanda = (pedido) => {
+    let texto = [];
+    
+    // Nome do restaurante
+    texto.push(`🏪 ${nomeRestaurante.toUpperCase()}`);
+    texto.push('COMANDA DE PEDIDO');
+    texto.push('================================');
+    
+    // Informações do pedido
+    texto.push(`Pedido #${pedido.numeroPedido}`);
+    texto.push(`Data/Hora: ${formatarData(pedido.createdAt)}`);
+    texto.push('================================');
+    
+    // Cliente
+    texto.push('CLIENTE:');
+    texto.push(`Nome: ${pedido.cliente.nome}`);
+    texto.push(`Telefone: ${pedido.cliente.telefone}`);
+    
+    // Tipo de entrega
+    if (pedido.entrega.tipo === 'delivery') {
+      texto.push('Tipo: 🚚 ENTREGA');
+      texto.push(`Endereço: ${pedido.entrega.endereco}`);
+    } else {
+      texto.push('Tipo: 🏪 RETIRADA NO LOCAL');
+    }
+    
+    texto.push('================================');
+    
+    // Itens
+    texto.push('ITENS DO PEDIDO:');
+    texto.push('');
+    pedido.itens.forEach((item, idx) => {
+      texto.push(`${item.quantidade}x ${item.nome} - R$ ${item.preco.toFixed(2)}`);
+      
+      // Extras
+      if (item.extras.length > 0) {
+        item.extras.forEach(extra => {
+          texto.push(`  + ${extra.nome} - R$ ${extra.preco.toFixed(2)}`);
+        });
+      }
+      
+      // Observações do item
+      if (item.observacoes) {
+        texto.push(`  📝 OBS: ${item.observacoes}`);
+      }
+      
+      texto.push(`  Subtotal: R$ ${item.subtotal.toFixed(2)}`);
+      texto.push('');
+    });
+    
+    texto.push('================================');
+    
+    // Observações gerais
+    if (pedido.observacoes) {
+      texto.push('OBSERVAÇÕES GERAIS:');
+      texto.push(pedido.observacoes);
+      texto.push('================================');
+    }
+    
+    // Pagamento
+    texto.push('PAGAMENTO:');
+    texto.push(`Forma: ${pedido.pagamento.forma}`);
+    if (pedido.entrega.taxa > 0) {
+      texto.push(`Taxa de Entrega: R$ ${pedido.entrega.taxa.toFixed(2)}`);
+    }
+    texto.push('');
+    texto.push(`TOTAL: R$ ${pedido.valorTotal.toFixed(2)}`);
+    texto.push('================================');
+    
+    return texto.join('\n');
+  };
+
   // Status com cores e informações
   const getStatusInfo = (status) => {
     const statusConfig = {
@@ -558,6 +652,13 @@ export default function Pedidos() {
               )}
 
               <div className="pedido-acoes">
+                <button 
+                  className="btn-copiar"
+                  onClick={() => copiarComanda(pedido)}
+                  title="Copiar comanda para colar no app da impressora"
+                >
+                  📋 Copiar
+                </button>
                 <button 
                   className="btn-imprimir"
                   onClick={() => imprimirPedido(pedido)}
