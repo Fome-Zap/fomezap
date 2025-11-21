@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCurrencyInput } from '../../hooks/useCurrencyInput.js';
 import api from '../../api/api';
 import ModalConfirmacao from '../../components/ModalConfirmacao';
+import ListaDraggable from '../../components/ListaDraggable';
 
 function Extras() {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ function Extras() {
   const [extraEditando, setExtraEditando] = useState(null);
   const [extraDeletar, setExtraDeletar] = useState(null);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
+  const [modoOrdenacao, setModoOrdenacao] = useState(false);
   
   // Hook de máscara de preço
   const preco = useCurrencyInput(0);
@@ -139,6 +141,69 @@ function Extras() {
     }
   };
 
+  const handleReordenar = async (itemsComOrdem, novosItems) => {
+    try {
+      const response = await api.put(`/api/admin/${tenantId}/extras/reordenar`, {
+        extras: itemsComOrdem
+      });
+      
+      console.log('✅ Extras reordenados:', response.data);
+      setExtras(novosItems);
+      mostrarMensagem('Ordem atualizada com sucesso!', 'sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao reordenar:', error);
+      const mensagemErro = error.response?.data?.error || 'Erro ao atualizar ordem';
+      mostrarMensagem(mensagemErro, 'erro');
+      carregarExtras();
+    }
+  };
+
+  const renderExtraCard = (extra) => (
+    <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
+      {modoOrdenacao && (
+        <div className="flex items-center text-gray-400 cursor-move mr-3">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+          </svg>
+        </div>
+      )}
+      
+      <div className="flex-1">
+        <h3 className="font-semibold text-gray-800">{extra.nome}</h3>
+        <p className="text-sm text-green-600 font-medium">
+          R$ {extra.preco?.toFixed(2) || '0.00'}
+        </p>
+      </div>
+      
+      <div className="flex items-center gap-2">
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+          extra.disponivel 
+            ? 'bg-green-100 text-green-700' 
+            : 'bg-gray-100 text-gray-700'
+        }`}>
+          {extra.disponivel ? 'Disponível' : 'Indisponível'}
+        </span>
+        
+        {!modoOrdenacao && (
+          <>
+            <button
+              onClick={() => abrirModal(extra)}
+              className="bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 text-sm font-medium"
+            >
+              Editar
+            </button>
+            <button
+              onClick={() => handleDeletar(extra)}
+              className="bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 text-sm font-medium"
+            >
+              Deletar
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -204,15 +269,32 @@ function Extras() {
           <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Extras</h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1">Adicionais que podem ser incluídos nos produtos</p>
         </div>
-        <button
-          onClick={() => abrirModal()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
-        >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Novo Extra
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setModoOrdenacao(!modoOrdenacao)}
+            className={`px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0 ${
+              modoOrdenacao
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+            </svg>
+            {modoOrdenacao ? 'Concluir Ordenação' : 'Reordenar'}
+          </button>
+          {!modoOrdenacao && (
+            <button
+              onClick={() => abrirModal()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Novo Extra
+            </button>
+          )}
+        </div>
       </div>
 
       {extras.length === 0 ? (
@@ -224,6 +306,22 @@ function Extras() {
           >
             Criar Primeiro Extra
           </button>
+        </div>
+      ) : modoOrdenacao ? (
+        <div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <p className="text-yellow-800 text-sm">
+              <strong>Modo de ordenação ativado:</strong> Arraste os extras para reordená-los.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <ListaDraggable
+              items={extras}
+              onReorder={handleReordenar}
+              renderItem={renderExtraCard}
+              idKey="_id"
+            />
+          </div>
         </div>
       ) : (
         <>

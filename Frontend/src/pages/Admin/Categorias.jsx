@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/api';
 import ModalSelecionarEmoji from '../../components/ModalSelecionarEmoji';
 import ModalConfirmacao from '../../components/ModalConfirmacao';
+import ListaDraggable from '../../components/ListaDraggable';
 
 function Categorias() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ function Categorias() {
   const [categoriaEditando, setCategoriaEditando] = useState(null);
   const [categoriaDeletar, setCategoriaDeletar] = useState(null);
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
+  const [modoOrdenacao, setModoOrdenacao] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     icone: '📦',
@@ -100,10 +102,10 @@ function Categorias() {
 
     try {
       if (categoriaEditando) {
-        const response = await api.put(`/api/admin/${TENANT_ID}/categorias/${categoriaEditando._id}`, formData);
+        const response = await api.put(`/api/admin/${tenantId}/categorias/${categoriaEditando._id}`, formData);
         mostrarMensagem(response.data.message, 'sucesso');
       } else {
-        const response = await api.post(`/api/admin/${TENANT_ID}/categorias`, formData);
+        const response = await api.post(`/api/admin/${tenantId}/categorias`, formData);
         mostrarMensagem(response.data.message, 'sucesso');
       }
       
@@ -130,7 +132,7 @@ function Categorias() {
     if (!categoriaDeletar) return;
 
     try {
-      const response = await api.delete(`/api/admin/${TENANT_ID}/categorias/${categoriaDeletar._id}`);
+      const response = await api.delete(`/api/admin/${tenantId}/categorias/${categoriaDeletar._id}`);
       mostrarMensagem(response.data.message, 'sucesso');
       carregarCategorias();
     } catch (error) {
@@ -141,6 +143,72 @@ function Categorias() {
       setCategoriaDeletar(null);
     }
   };
+
+  const handleReordenar = async (itemsComOrdem, novosItems) => {
+    try {
+      const response = await api.put(`/api/admin/${tenantId}/categorias/reordenar`, {
+        categorias: itemsComOrdem
+      });
+      
+      console.log('✅ Categorias reordenadas:', response.data);
+      setCategorias(novosItems);
+      mostrarMensagem('Ordem atualizada com sucesso!', 'sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao reordenar:', error);
+      const mensagemErro = error.response?.data?.error || 'Erro ao atualizar ordem';
+      mostrarMensagem(mensagemErro, 'erro');
+      carregarCategorias();
+    }
+  };
+
+  const renderCategoriaCard = (categoria) => (
+    <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
+      {modoOrdenacao && (
+        <div className="flex items-center text-gray-400 cursor-move mr-3">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+          </svg>
+        </div>
+      )}
+      
+      <div className="flex items-center gap-3 flex-1">
+        <span className="text-3xl">{categoria.icone}</span>
+        <div>
+          <h3 className="font-semibold text-gray-800">{categoria.nome}</h3>
+          <p className="text-sm text-gray-500">
+            {categoria.totalProdutos || 0} produto(s)
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-2">
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+          categoria.ativa 
+            ? 'bg-green-100 text-green-700' 
+            : 'bg-gray-100 text-gray-700'
+        }`}>
+          {categoria.ativa ? 'Ativa' : 'Inativa'}
+        </span>
+        
+        {!modoOrdenacao && (
+          <>
+            <button
+              onClick={() => abrirModal(categoria)}
+              className="bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 text-sm font-medium"
+            >
+              Editar
+            </button>
+            <button
+              onClick={() => handleDeletar(categoria)}
+              className="bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 text-sm font-medium"
+            >
+              Deletar
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -204,15 +272,32 @@ function Categorias() {
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Categorias</h1>
-        <button
-          onClick={() => abrirModal()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
-        >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Nova Categoria
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setModoOrdenacao(!modoOrdenacao)}
+            className={`px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0 ${
+              modoOrdenacao
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+            </svg>
+            {modoOrdenacao ? 'Concluir Ordenação' : 'Reordenar'}
+          </button>
+          {!modoOrdenacao && (
+            <button
+              onClick={() => abrirModal()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Nova Categoria
+            </button>
+          )}
+        </div>
       </div>
 
       {categorias.length === 0 ? (
@@ -225,42 +310,27 @@ function Categorias() {
             Criar Primeira Categoria
           </button>
         </div>
+      ) : modoOrdenacao ? (
+        <div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <p className="text-yellow-800 text-sm">
+              <strong>Modo de ordenação ativado:</strong> Arraste as categorias para reordená-las.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <ListaDraggable
+              items={categorias}
+              onReorder={handleReordenar}
+              renderItem={renderCategoriaCard}
+              idKey="_id"
+            />
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {categorias.map((categoria) => (
-            <div key={categoria._id} className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex flex-col">
-              {/* Emoji e Nome */}
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-4xl flex-shrink-0">{categoria.icone}</span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-base">{categoria.nome}</h3>
-                </div>
-              </div>
-              
-              {/* Informações */}
-              <div className="space-y-2 mb-3">
-                <p className="text-sm text-gray-600">{categoria.totalProdutos} produto(s)</p>
-                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${categoria.ativa ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {categoria.ativa ? 'Ativa' : 'Inativa'}
-                </span>
-              </div>
-              
-              {/* Botões */}
-              <div className="flex gap-2 mt-auto">
-                <button
-                  onClick={() => abrirModal(categoria)}
-                  className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 text-sm font-medium"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDeletar(categoria)}
-                  className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={categoria.totalProdutos > 0}
-                >
-                  Deletar
-                </button>
-              </div>
+            <div key={categoria._id}>
+              {renderCategoriaCard(categoria)}
             </div>
           ))}
         </div>

@@ -17,6 +17,9 @@ build/
 .env.docker
 Backend/.env
 SuperAdmin/.env
+Frontend/.env
+*.env
+config*.json
 
 # IDE
 .vscode/

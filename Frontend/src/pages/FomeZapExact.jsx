@@ -43,6 +43,16 @@ function FomeZapExact() {
   
   // Estado para toast de notificações
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  
+  // Estado para tracking de scroll - destacar categoria ativa no menu
+  const [categoriaVisivel, setCategoriaVisivel] = useState(null);
+
+  // Estado para cores do tema
+  const [temaCores, setTemaCores] = useState({
+    corPrimaria: '#ff6b35',
+    corSecundaria: '#2c3e50',
+    corBotao: '#27ae60'
+  });
 
   // Função para formatar preço em BRL
   const formatarPreco = (valor) => {
@@ -115,6 +125,54 @@ function FomeZapExact() {
     }
   }, [categorias]); // Re-executar quando categorias mudarem
 
+  // useEffect para detectar categoria visível ao rolar a página
+  useEffect(() => {
+    if (categorias.length === 0 || categoriaAtiva !== 'all') return;
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -70% 0px',
+      threshold: [0, 0.1, 0.25]
+    };
+
+    let ultimaCategoriaVisivel = null;
+
+    const observerCallback = (entries) => {
+      // Encontrar a entrada com maior intersectionRatio
+      let entradaMaisVisivel = null;
+      let maiorRatio = 0;
+
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.intersectionRatio > maiorRatio) {
+          maiorRatio = entry.intersectionRatio;
+          entradaMaisVisivel = entry;
+        }
+      });
+
+      if (entradaMaisVisivel) {
+        const categoriaId = entradaMaisVisivel.target.id;
+        if (categoriaId && categoriaId !== ultimaCategoriaVisivel) {
+          ultimaCategoriaVisivel = categoriaId;
+          setCategoriaVisivel(categoriaId);
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observar todas as seções de categoria
+    categorias.forEach(categoria => {
+      const section = document.getElementById(categoria._id);
+      if (section) {
+        observer.observe(section);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [categorias, categoriaAtiva]);
+
   // Funções para scroll suave nas setas
   const scrollLeft = () => {
     if (categoryFilterRef.current) {
@@ -181,11 +239,32 @@ function FomeZapExact() {
         aceitaDelivery: configData?.aceitaDelivery !== false
       });
       
+      // Configurar cores do tema
+      if (configData?.tema) {
+        const cores = {
+          corPrimaria: configData.tema.corPrimaria || '#ff6b35',
+          corSecundaria: configData.tema.corSecundaria || '#2c3e50',
+          corBotao: configData.tema.corBotao || '#27ae60'
+        };
+        setTemaCores(cores);
+        
+        // Aplicar CSS variables
+        document.documentElement.style.setProperty('--cor-primaria', cores.corPrimaria);
+        document.documentElement.style.setProperty('--cor-secundaria', cores.corSecundaria);
+        document.documentElement.style.setProperty('--cor-botao', cores.corBotao);
+      }
+      
       // Informações de horário
       setHorarioInfo(horarioData);
       
-      setCategorias(categoriasData.filter(c => c.ativa)); // Apenas categorias ativas
-      setProdutos(produtosData.filter(p => p.disponivel)); // Apenas produtos disponíveis
+      setCategorias(categoriasData.filter(c => c.ativa).sort((a, b) => a.ordem - b.ordem)); // Ordenar por ordem
+      setProdutos(produtosData.filter(p => p.disponivel).sort((a, b) => {
+        // Primeiro ordenar por categoria, depois por ordem dentro da categoria
+        const catA = categoriasData.find(c => c._id === a.categoria?._id)?.ordem || 0;
+        const catB = categoriasData.find(c => c._id === b.categoria?._id)?.ordem || 0;
+        if (catA !== catB) return catA - catB;
+        return (a.ordem || 0) - (b.ordem || 0);
+      })); // Ordenar por categoria e ordem
       setExtras(extrasData.filter(e => e.disponivel)); // Apenas extras disponíveis
       
       console.log('🎉 Carregamento concluído com sucesso!');
@@ -199,7 +278,26 @@ function FomeZapExact() {
 
   const produtosFiltrados = categoriaAtiva === 'all' 
     ? produtos
-    : produtos.filter(produto => produto.categoria._id === categoriaAtiva);
+    : produtos.filter(produto => produto.categoria?._id === categoriaAtiva);
+
+  // Agrupar produtos por categoria (quando mostrar todos)
+  const produtosPorCategoria = () => {
+    if (categoriaAtiva !== 'all') {
+      const categoria = categorias.find(c => c._id === categoriaAtiva);
+      if (!categoria) return [];
+      return [{ categoria, produtos: produtosFiltrados }];
+    }
+    
+    // Agrupar por categoria mantendo a ordem
+    const grupos = [];
+    categorias.forEach(cat => {
+      const produtosCategoria = produtos.filter(p => p.categoria?._id === cat._id);
+      if (produtosCategoria.length > 0) {
+        grupos.push({ categoria: cat, produtos: produtosCategoria });
+      }
+    });
+    return grupos;
+  };
 
   // Verificar se o produto tem extras vinculados
   const produtoTemExtras = (produto) => {
@@ -631,7 +729,7 @@ function FomeZapExact() {
             {categorias.map(categoria => (
               <button
                 key={categoria._id}
-                className={`filter-btn ${categoriaAtiva === categoria._id ? 'active' : ''}`}
+                className={`filter-btn ${(categoriaAtiva === 'all' && categoriaVisivel === categoria._id) || categoriaAtiva === categoria._id ? 'active' : ''}`}
                 data-category={categoria._id}
                 onClick={() => setCategoriaAtiva(categoria._id)}
               >
@@ -641,78 +739,202 @@ function FomeZapExact() {
           </div>
         </div>
 
-        {/* Seções de produtos */}
-        <section id={categoriaAtiva}>
-          <div className="section-title">
-            <h2>
-              {categoriaAtiva === 'all' 
-                ? 'Cardápio Completo'
-                : categorias.find(c => c._id === categoriaAtiva)?.nome || 'Produtos'
-              }
-            </h2>
-          </div>
-          <div className="menu-grid">
-            {produtosFiltrados.map(produto => (
-              <div key={produto._id} className="menu-item">
-                <div className="item-image">
-                  {/* Prioridade: imagem → emoji → placeholder */}
-                  {produto.imagem ? (
-                    <img 
-                      src={getImageUrl(produto.imagem)}
-                      alt={produto.nome}
-                      onError={(e) => {
-                        e.target.src = '/placeholder-food.jpg';
-                      }}
-                    />
-                  ) : produto.emoji ? (
-                    <div style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      fontSize: '5rem',
-                      backgroundColor: '#f3f4f6'
-                    }}>
-                      {produto.emoji}
-                    </div>
-                  ) : (
-                    <div style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      fontSize: '4rem',
-                      backgroundColor: '#f3f4f6',
-                      color: '#d1d5db'
-                    }}>
-                      🍽️
-                    </div>
-                  )}
-                </div>
-                <div className="item-info">
-                  <div className="item-header">
-                    <h3 className="item-title">
-                      {produto.codigo && `${produto.codigo} - `}{produto.nome}
-                    </h3>
-                    <p className="item-description">{produto.descricao}</p>
+        {/* Seções de produtos agrupados por categoria */}
+        {produtosPorCategoria().map(({ categoria, produtos: produtosGrupo }) => (
+          <section key={categoria._id} id={categoria._id} style={{ marginBottom: '3rem' }}>
+            {/* Título da categoria - Design minimalista */}
+            <div className="category-section-title" style={{
+              padding: '0.8rem 1.2rem',
+              borderBottom: '2px solid #ff6b35',
+              marginBottom: '1.5rem',
+              marginTop: '2rem'
+            }}>
+              <h2 style={{ 
+                margin: 0, 
+                fontSize: '1.2rem', 
+                fontWeight: '600',
+                color: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <span style={{ fontSize: '1.3rem' }}>{categoria.icone}</span>
+                {categoria.nome}
+              </h2>
+            </div>
+
+            {/* Grid de produtos */}
+            <div className="menu-grid">
+              {produtosGrupo.map(produto => (
+                <div key={produto._id} className="menu-item">
+                  <div className="item-image">
+                    {/* Prioridade: imagem → emoji → placeholder */}
+                    {produto.imagem ? (
+                      <img 
+                        src={getImageUrl(produto.imagem)}
+                        alt={produto.nome}
+                        onError={(e) => {
+                          e.target.src = '/placeholder-food.jpg';
+                        }}
+                      />
+                    ) : produto.emoji ? (
+                      <div style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: '5rem',
+                        backgroundColor: '#f3f4f6'
+                      }}>
+                        {produto.emoji}
+                      </div>
+                    ) : (
+                      <div style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: '4rem',
+                        backgroundColor: '#f3f4f6',
+                        color: '#d1d5db'
+                      }}>
+                        🍽️
+                      </div>
+                    )}
                   </div>
-                  <div className="item-footer">
-                    <span className="item-price">R$ {formatarPreco(produto.preco)}</span>
-                    <button 
-                      className="add-to-cart"
-                      onClick={() => handleAddToCart(produto)}
-                    >
-                      <i className="fas fa-plus"></i> Adicionar
-                    </button>
+                  <div className="item-info">
+                    <div className="item-header">
+                      <h3 className="item-title">
+                        {produto.codigo && `${produto.codigo} - `}{produto.nome}
+                      </h3>
+                      <p className="item-description">{produto.descricao}</p>
+                    </div>
+                    <div className="item-footer">
+                      <span className="item-price">R$ {formatarPreco(produto.preco)}</span>
+                      <button 
+                        className="add-to-cart"
+                        onClick={() => handleAddToCart(produto)}
+                      >
+                        <i className="fas fa-plus"></i> Adicionar
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        ))}
       </main>
+
+      {/* Rodapé Minimalista */}
+      <footer style={{
+        backgroundColor: '#f8f9fa',
+        borderTop: '1px solid #e9ecef',
+        padding: '2rem 1rem',
+        marginTop: '4rem'
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '2rem'
+        }}>
+          {/* Informações do Restaurante */}
+          <div>
+            <h3 style={{ 
+              fontSize: '1.1rem', 
+              fontWeight: '600', 
+              marginBottom: '0.8rem',
+              color: 'var(--cor-secundaria, #2c3e50)'
+            }}>
+              {tenantData?.nome || 'Nosso Restaurante'}
+            </h3>
+            <p style={{ 
+              fontSize: '0.9rem', 
+              color: '#666',
+              lineHeight: '1.6',
+              marginBottom: '0.5rem'
+            }}>
+              <i className="fas fa-map-marker-alt" style={{ marginRight: '0.5rem', color: 'var(--cor-primaria, #ff6b35)' }}></i>
+              {tenantData?.endereco || 'Endereço não cadastrado'}
+            </p>
+          </div>
+
+          {/* Horário de Funcionamento */}
+          {horarioInfo && (
+            <div>
+              <h3 style={{ 
+                fontSize: '1.1rem', 
+                fontWeight: '600', 
+                marginBottom: '0.8rem',
+                color: 'var(--cor-secundaria, #2c3e50)'
+              }}>
+                Horário
+              </h3>
+              <p style={{ 
+                fontSize: '0.9rem', 
+                color: '#666',
+                lineHeight: '1.6'
+              }}>
+                <i className="fas fa-clock" style={{ marginRight: '0.5rem', color: 'var(--cor-primaria, #ff6b35)' }}></i>
+                {horarioInfo.diasFuncionamento?.join(', ') || 'Seg - Dom'}
+                <br />
+                <span style={{ marginLeft: '1.5rem' }}>
+                  {horarioInfo.horarioAbertura || '00:00'} - {horarioInfo.horarioFechamento || '23:59'}
+                </span>
+              </p>
+            </div>
+          )}
+
+          {/* Informações de Entrega */}
+          <div>
+            <h3 style={{ 
+              fontSize: '1.1rem', 
+              fontWeight: '600', 
+              marginBottom: '0.8rem',
+              color: 'var(--cor-secundaria, #2c3e50)'
+            }}>
+              Serviços
+            </h3>
+            <p style={{ 
+              fontSize: '0.9rem', 
+              color: '#666',
+              lineHeight: '1.8'
+            }}>
+              {tenantData?.aceitaDelivery && (
+                <>
+                  <i className="fas fa-motorcycle" style={{ marginRight: '0.5rem', color: 'var(--cor-primaria, #ff6b35)' }}></i>
+                  Delivery disponível
+                  <br />
+                </>
+              )}
+              <i className="fas fa-store" style={{ marginRight: '0.5rem', color: 'var(--cor-primaria, #ff6b35)' }}></i>
+              Retirada no local
+              <br />
+              <i className="fas fa-credit-card" style={{ marginRight: '0.5rem', color: 'var(--cor-primaria, #ff6b35)' }}></i>
+              Dinheiro, Cartão, PIX
+            </p>
+          </div>
+        </div>
+
+        {/* Copyright */}
+        <div style={{
+          textAlign: 'center',
+          marginTop: '2rem',
+          paddingTop: '1.5rem',
+          borderTop: '1px solid #e9ecef'
+        }}>
+          <p style={{ 
+            fontSize: '0.85rem', 
+            color: '#999'
+          }}>
+            © {new Date().getFullYear()} {tenantData?.nome || 'FomeZap'}. Todos os direitos reservados.
+          </p>
+        </div>
+      </footer>
 
       {/* Cart Sidebar - Igual ao HTML original */}
       <div className={`cart-sidebar ${cartOpen ? 'active' : ''}`}>

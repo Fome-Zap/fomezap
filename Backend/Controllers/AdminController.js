@@ -637,4 +637,74 @@ export default class AdminController {
       res.status(500).json({ error: 'Erro ao deletar pedido' });
     }
   }
+
+  // ============================================
+  // REORDENAÇÃO (DRAG AND DROP)
+  // ============================================
+
+  // Reordenar produtos
+  static async reordenarProdutos(req, res) {
+    try {
+      const { tenantId } = req.params;
+      const { produtos } = req.body; // Array de { id, ordem }
+      
+      console.log('📦 Recebido pedido de reordenação:', { tenantId, produtos });
+      
+      if (!Array.isArray(produtos)) {
+        console.error('❌ Formato inválido - não é array');
+        return res.status(400).json({ error: 'Formato inválido - produtos deve ser um array' });
+      }
+      
+      if (produtos.length === 0) {
+        console.error('❌ Array vazio');
+        return res.status(400).json({ error: 'Array de produtos está vazio' });
+      }
+      
+      // Atualizar ordem de cada produto
+      const promises = produtos.map(({ id, ordem }) => {
+        console.log(`  Atualizando produto ${id} -> ordem ${ordem}`);
+        return Produto.findOneAndUpdate(
+          { _id: id, tenantId },
+          { ordem },
+          { new: true }
+        );
+      });
+      
+      const results = await Promise.all(promises);
+      console.log('✅ Produtos atualizados:', results.length);
+      
+      res.status(200).json({ message: 'Ordem dos produtos atualizada com sucesso' });
+    } catch (error) {
+      console.error('❌ Erro ao reordenar produtos:', error);
+      res.status(500).json({ error: 'Erro ao reordenar produtos', details: error.message });
+    }
+  }
+
+  // Reordenar extras
+  static async reordenarExtras(req, res) {
+    try {
+      const { tenantId } = req.params;
+      const { extras } = req.body; // Array de { id, ordem }
+      
+      if (!Array.isArray(extras)) {
+        return res.status(400).json({ error: 'Formato inválido' });
+      }
+      
+      // Atualizar ordem de cada extra
+      const promises = extras.map(({ id, ordem }) => 
+        Extra.findOneAndUpdate(
+          { _id: id, tenantId },
+          { ordem },
+          { new: true }
+        )
+      );
+      
+      await Promise.all(promises);
+      
+      res.status(200).json({ message: 'Ordem dos extras atualizada com sucesso' });
+    } catch (error) {
+      console.error('Erro ao reordenar extras:', error);
+      res.status(500).json({ error: 'Erro ao reordenar extras' });
+    }
+  }
 }

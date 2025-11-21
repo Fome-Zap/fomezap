@@ -6,6 +6,7 @@ import api from '../../api/api';
 import SeletorImagemProduto from '../../components/SeletorImagemProduto';
 import { getImageUrl } from '../../config/api';
 import ModalConfirmacao from '../../components/ModalConfirmacao';
+import ListaDraggable from '../../components/ListaDraggable';
 
 function Produtos() {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ function Produtos() {
   const [produtoDeletar, setProdutoDeletar] = useState(null);
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [mensagem, setMensagem] = useState({ tipo: '', texto: '' });
+  const [modoOrdenacao, setModoOrdenacao] = useState(false);
   
   // Hook de máscara de preço
   const preco = useCurrencyInput(0);
@@ -215,6 +217,107 @@ function Produtos() {
     }));
   };
 
+  const handleReordenar = async (itemsComOrdem, novosItems) => {
+    try {
+      // Enviar nova ordem para o backend
+      const response = await api.put(`/api/admin/${tenantId}/produtos/reordenar`, {
+        produtos: itemsComOrdem
+      });
+      
+      console.log('✅ Resposta do servidor:', response.data);
+      
+      // Atualizar lista local
+      setProdutos(novosItems);
+      mostrarMensagem('Ordem atualizada com sucesso!', 'sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao reordenar:', error);
+      console.error('Detalhes:', error.response?.data);
+      const mensagemErro = error.response?.data?.error || 'Erro ao atualizar ordem';
+      mostrarMensagem(mensagemErro, 'erro');
+      carregarDados(); // Recarregar em caso de erro
+    }
+  };
+
+  const renderProdutoCard = (produto) => (
+    <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-3 flex flex-col">
+      <div className="flex gap-3 mb-2">
+        {/* Ícone de drag */}
+        {modoOrdenacao && (
+          <div className="flex items-center text-gray-400 cursor-move">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+            </svg>
+          </div>
+        )}
+        
+        {/* Thumbnail da imagem/emoji */}
+        <div className="w-14 h-14 flex-shrink-0 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+          {produto.imagem ? (
+            <img
+              src={getImageUrl(produto.imagem)}
+              alt={produto.nome}
+              className="w-full h-full object-cover"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <span className="text-2xl">{produto.emoji || '🍽️'}</span>
+          )}
+        </div>
+        
+        {/* Informações do produto */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-sm line-clamp-2 leading-tight mb-1">{produto.nome}</h3>
+          <p className="text-xs text-gray-500 truncate">{produto.categoria.nome}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-sm font-bold text-green-600">
+              R$ {produto.preco.toFixed(2)}
+            </span>
+            {produto.destaque && (
+              <span className="text-xs">⭐</span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <span className={`text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 ${
+          produto.disponivel
+            ? 'bg-green-100 text-green-700'
+            : 'bg-red-100 text-red-700'
+        }`}>
+          {produto.disponivel ? 'Ativo' : 'Inativo'}
+        </span>
+        {produto.destaque && (
+          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-medium">
+            Destaque
+          </span>
+        )}
+        {produto.extras?.length > 0 && (
+          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium flex-shrink-0">
+            {produto.extras.length} extra(s)
+          </span>
+        )}
+      </div>
+
+      {!modoOrdenacao && (
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button
+            onClick={() => abrirModal(produto)}
+            className="bg-blue-50 text-blue-600 px-2 py-1.5 rounded hover:bg-blue-100 text-xs font-medium"
+          >
+            Editar
+          </button>
+          <button
+            onClick={() => handleDeletar(produto)}
+            className="bg-red-50 text-red-600 px-2 py-1.5 rounded hover:bg-red-100 text-xs font-medium"
+          >
+            Deletar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -277,15 +380,32 @@ function Produtos() {
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Produtos</h1>
-        <button
-          onClick={() => abrirModal()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
-        >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Novo Produto
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setModoOrdenacao(!modoOrdenacao)}
+            className={`px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0 ${
+              modoOrdenacao
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+            </svg>
+            {modoOrdenacao ? 'Concluir Ordenação' : 'Reordenar'}
+          </button>
+          {!modoOrdenacao && (
+            <button
+              onClick={() => abrirModal()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm sm:text-base font-medium whitespace-nowrap flex-shrink-0"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Novo Produto
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filtros */}
@@ -315,74 +435,27 @@ function Produtos() {
             Criar Primeiro Produto
           </button>
         </div>
+      ) : modoOrdenacao ? (
+        <div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <p className="text-yellow-800 text-sm">
+              <strong>Modo de ordenação ativado:</strong> Arraste os produtos para reordená-los. A ordem será salva automaticamente.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <ListaDraggable
+              items={produtosFiltrados}
+              onReorder={handleReordenar}
+              renderItem={renderProdutoCard}
+              idKey="_id"
+            />
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {produtosFiltrados.map((produto) => (
-            <div key={produto._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-3 flex flex-col">
-              <div className="flex gap-3 mb-2">
-                {/* Thumbnail da imagem/emoji */}
-                <div className="w-14 h-14 flex-shrink-0 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                  {produto.imagem ? (
-                    <img
-                      src={getImageUrl(produto.imagem)}
-                      alt={produto.nome}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <span className="text-2xl">{produto.emoji || '🍽️'}</span>
-                  )}
-                </div>
-                
-                {/* Informações do produto */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-sm line-clamp-2 leading-tight mb-1">{produto.nome}</h3>
-                  <p className="text-xs text-gray-500 truncate">{produto.categoria.nome}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-sm font-bold text-green-600">
-                      R$ {produto.preco.toFixed(2)}
-                    </span>
-                    {produto.destaque && (
-                      <span className="text-xs">⭐</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className={`text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 ${
-                  produto.disponivel
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  {produto.disponivel ? 'Ativo' : 'Inativo'}
-                </span>
-                {produto.destaque && (
-                  <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-medium">
-                    Destaque
-                  </span>
-                )}
-                {produto.extras?.length > 0 && (
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium flex-shrink-0">
-                    {produto.extras.length} extra(s)
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mt-auto">
-                <button
-                  onClick={() => abrirModal(produto)}
-                  className="bg-blue-50 text-blue-600 px-2 py-1.5 rounded hover:bg-blue-100 text-xs font-medium"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDeletar(produto)}
-                  className="bg-red-50 text-red-600 px-2 py-1.5 rounded hover:bg-red-100 text-xs font-medium"
-                >
-                  Deletar
-                </button>
-              </div>
+            <div key={produto._id}>
+              {renderProdutoCard(produto)}
             </div>
           ))}
         </div>

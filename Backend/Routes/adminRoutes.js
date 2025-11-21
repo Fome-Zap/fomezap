@@ -30,6 +30,7 @@ router.post("/:tenantId/produtos", verificarTenantAdmin, AdminController.criarPr
 router.put("/:tenantId/produtos/:id", verificarTenantAdmin, AdminController.editarProduto);
 router.delete("/:tenantId/produtos/:id", verificarTenantAdmin, AdminController.deletarProduto);
 router.patch("/:tenantId/produtos/:id/toggle", verificarTenantAdmin, AdminController.toggleDisponibilidade);
+router.put("/:tenantId/produtos/reordenar", verificarTenantAdmin, AdminController.reordenarProdutos);
 
 // ============================================
 // EXTRAS
@@ -38,6 +39,7 @@ router.get("/:tenantId/extras", verificarTenantAdmin, AdminController.listarExtr
 router.post("/:tenantId/extras", verificarTenantAdmin, AdminController.criarExtra);
 router.put("/:tenantId/extras/:id", verificarTenantAdmin, AdminController.editarExtra);
 router.delete("/:tenantId/extras/:id", verificarTenantAdmin, AdminController.deletarExtra);
+router.put("/:tenantId/extras/reordenar", verificarTenantAdmin, AdminController.reordenarExtras);
 
 // ============================================
 // CONFIGURAÇÕES

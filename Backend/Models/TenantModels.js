@@ -137,7 +137,8 @@ const produtoSchema = new Schema({
   disponivel: { type: Boolean, default: true },
   destaque: { type: Boolean, default: false },
   extras: [String], // IDs dos extras disponíveis
-  tags: [String]
+  tags: [String],
+  ordem: { type: Number, default: 0 }
 }, { 
   timestamps: true 
 });
@@ -157,7 +158,8 @@ const extraSchema = new Schema({
     required: true,
     min: 0
   },
-  disponivel: { type: Boolean, default: true }
+  disponivel: { type: Boolean, default: true },
+  ordem: { type: Number, default: 0 }
 }, { 
   timestamps: true 
 });
