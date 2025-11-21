@@ -14,6 +14,7 @@ import { verificarToken, verificarTenantAdmin } from "./Middlewares/auth.js";
 import detectarTenant from "./Middlewares/detectarTenant.js";
 import { validarDominioManager } from "./Middlewares/validarDominio.js";
 import UploadController from "./Controllers/UploadController.js";
+import keepServerAlive from "./keepAlive.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -235,6 +236,9 @@ app.listen(PORT, () => {
     console.log(`🔍 Debug tenant: http://localhost:${PORT}/detect-tenant`);
     console.log(`🏪 API Multi-tenant: http://localhost:${PORT}/api/*`);
     console.log(`⚙️  Painel Admin: http://localhost:${PORT}/api/admin/*`);
+    
+    // Iniciar keep-alive (só funciona em produção/Render)
+    keepServerAlive();
 });
 
 export default app;
