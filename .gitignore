@@ -68,3 +68,9 @@ zzArquivosAntigosReaproveitarAlo/
 # Workspace do VS Code
 *.code-workspace
 Backend/*.code-workspace
+
+#docs
+docs/
+zOldFiles/
+
+# O arquivo .env.docker no root está listado acima e será ignorado pelo git.
