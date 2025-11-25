@@ -9,7 +9,7 @@ const isProduction = import.meta.env.PROD ||
     window.location.hostname.includes('fomezap.com')));
 
 const baseURL = isProduction
-  ? '' // Usar URL relativa em produção (proxy do Nginx)
+  ? 'https://fomezap-api.onrender.com'
   : 'http://localhost:5000';
 
 // Configurar base URL
