@@ -35,9 +35,11 @@ app.use(cors({
         // Permitir requests sem origin (mobile apps, Postman)
         if (!origin) return callback(null, true);
         
+        // Origins padrão
         const allowedOrigins = [
             "http://localhost",
             "http://localhost:80",
+            "http://localhost:30080", // Kubernetes
             "http://localhost:5173",
             "http://localhost:5174",
             "http://localhost:5175",
@@ -50,6 +52,12 @@ app.use(cors({
             "https://thi-burg.fomezap.com",
             "https://manager.fomezap.com"
         ];
+        
+        // Adicionar origins do .env se existirem
+        if (process.env.CORS_ORIGINS) {
+            const envOrigins = process.env.CORS_ORIGINS.split(',').map(o => o.trim());
+            allowedOrigins.push(...envOrigins);
+        }
         
         // Verificar origins permitidas ou patterns
         if (allowedOrigins.includes(origin) ||

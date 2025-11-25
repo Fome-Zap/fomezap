@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  labels:
+    app: fomezap-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fomezap-frontend
+  template:
+    metadata:
+      labels:
+        app: fomezap-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: fomezap-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: fomezap-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+  type: NodePort

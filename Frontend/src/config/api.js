@@ -9,7 +9,7 @@ const isProduction = import.meta.env.PROD ||
 
 // URL base da API (backend)
 export const API_BASE_URL = isProduction
-  ? 'https://fomezap-api.onrender.com' 
+  ? '' // Usar URL relativa em produção (proxy do Nginx)
   : 'http://localhost:5000';
 
 // URL completa da API com /api
